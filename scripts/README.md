@@ -19,7 +19,13 @@ cp onnx-export/config.json onnx-export/generation_config.json src-model/LICENSE 
 python scripts/compare_variants.py src-model out onnx/model.onnx
 ```
 
-Under utveckling kopieras `out/` till `public/models/gpt-sw3-126m/`.
+Lägg sedan ett modellkort (`README.md`) i `out/` och ladda upp mappen till Hugging Face:
+
+```bash
+hf upload HuggingVidar/gpt-sw3-126m-onnx out .
+```
+
+Vill du prova lokala filer i stället, kopiera `out/` till `public/models/gpt-sw3-126m/` och sätt `VITE_MODEL_BASE` enligt `src/model/config.js`.
 
 Uppmätt 2026-11-14: tokeniseraren ger identiska bitar för alla testmeningar, och
 den krympta modellen ger samma toppval i 299 av 299 positioner jämfört med

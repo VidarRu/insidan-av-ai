@@ -10,13 +10,14 @@ Senast uppdaterad 2026-11-14.
 - **Steg 4, modellen inkopplad.** Egen mening, bitar, sannolikheter, slump och hallucination räknas live när modellen är laddad. Innan dess visas de förberäknade exemplen.
 - **Ett första utkast till alla texter** och rutorna "Så här är det egentligen" (steg 5 i planen). De behöver läsas av Vidar och granskas.
 
+- **Modellen ligger på Hugging Face:** [HuggingVidar/gpt-sw3-126m-onnx](https://huggingface.co/HuggingVidar/gpt-sw3-126m-onnx), med licens, riktlinjer och ett modellkort som beskriver ändringarna. Sidan hämtar modellen därifrån (se `src/model/config.js`), provkört i webbläsare 2026-11-14.
+
 ## Nästa steg
 
-1. **Vidar: skaffa ett konto på Hugging Face** och en nyckel med skrivrätt, så att modellfilerna kan läggas upp där. Utan det fungerar den riktiga modellen bara i utvecklingsmiljön. När filerna ligger uppe sätts `VITE_MODEL_BASE` till mappens adress (se `src/model/config.js`).
-2. **Texter (steg 5).** Utkasten gäller tills vidare. Vidar redigerar dem senare med Opus.
-3. **Finputs (steg 6).** Mobilvyn är bara grovt gjord: bilden hamnar bakom textrutan i flera steg. Prova också på en svag dator och med skärmläsare.
-4. **Granskning (steg 7)** av en fristående session, särskilt påståendena under "Att kontrollera" nedan.
-5. **Publicering (steg 8)** på Vercel.
+1. **Texter (steg 5).** Utkasten gäller tills vidare. Vidar redigerar dem senare med Opus.
+2. **Finputs (steg 6).** Mobilvyn är bara grovt gjord: bilden hamnar bakom textrutan i flera steg. Prova också på en svag dator och med skärmläsare.
+3. **Granskning (steg 7)** av en fristående session, särskilt påståendena under "Att kontrollera" nedan.
+4. **Publicering (steg 8)** på Vercel.
 
 ## Beslut
 
@@ -43,11 +44,12 @@ Senast uppdaterad 2026-11-14.
 
 - **Nedladdningen på 259 MB.** På dator hämtas modellen automatiskt, på mobil och i datasparläge först när besökaren trycker på knappen. Är det rätt avvägning?
 - **GPT-2:s tokeniserare** (1,4 MB, MIT-licens) ligger i `public/data/`. Vill vi ha jämförelsen?
-- Från planen, fortfarande öppna: licens för sidan, AI Swedens licensvillkor (läs i sin helhet före publicering, modellkort och licens ska följa med filerna på Hugging Face), namn och adress, engelsk version.
+- **AI Swedens licens** är läst. Vidaredistribution av ändrade versioner är tillåten om licensen och riktlinjerna följer med, upphovet anges (AI Sweden, RISE, WASP), ändringarna beskrivs och inget antyder att de står bakom versionen. Det är gjort i modellkortet och i sidfoten. Licensen kräver också att användare av en tjänst som bygger på modellen får veta det och kan nå villkoren: sidfoten länkar dit. En jurist har inte läst detta.
+- Från planen, fortfarande öppna: licens för sidan, namn och adress, engelsk version.
 
 ## Bra att veta för nästa session
 
 - Molnmiljön heter `insidan-av-ai` och har åtkomst till Hugging Face. Hämta med `HF_HUB_DISABLE_XET=1`.
-- Modellfilerna finns inte i Git. I en ny session måste de antingen hämtas från Hugging Face (när de ligger där) eller byggas om med skripten (cirka fem minuter).
+- Modellfilerna finns inte i Git. Sidan hämtar dem från Hugging Face. Miljön har en sparad skrivnyckel för `huggingface.co`, som proxyn sätter in automatiskt.
 - Starta med `npm install` och `npm run dev`. `?ingenmodell` stänger av modellen, `?backend=wasm` tvingar WebAssembly.
 - WebGPU är inte provat (testmiljön har inget grafikkort). Koden väljer WebGPU när det finns och provkör en gång innan den litar på det.
