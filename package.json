@@ -1,0 +1,35 @@
+{
+  "name": "insidan-av-ai",
+  "version": "1.0.0",
+  "description": "Inuti språkmodellen – en interaktiv sida om vad som händer inuti en språkmodell",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "postinstall": "node scripts/copy-ort.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/VidarRu/insidan-av-ai.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/VidarRu/insidan-av-ai/issues"
+  },
+  "homepage": "https://github.com/VidarRu/insidan-av-ai#readme",
+  "devDependencies": {
+    "vite": "^8.3.8"
+  },
+  "dependencies": {
+    "@huggingface/tokenizers": "^0.2.0",
+    "onnxruntime-web": "^1.24.3",
+    "three": "^0.187.0"
+  },
+  "private": true,
+  "type": "module"
+}
