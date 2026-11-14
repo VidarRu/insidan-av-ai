@@ -13,10 +13,14 @@ Senast uppdaterad 2026-11-14.
 ## Nästa steg
 
 1. **Vidar: skaffa ett konto på Hugging Face** och en nyckel med skrivrätt, så att modellfilerna kan läggas upp där. Utan det fungerar den riktiga modellen bara i utvecklingsmiljön. När filerna ligger uppe sätts `VITE_MODEL_BASE` till mappens adress (se `src/model/config.js`).
-2. **Texter (steg 5).** Vidar läser utkasten. Stryk, skriv om, säg till.
+2. **Texter (steg 5).** Utkasten gäller tills vidare. Vidar redigerar dem senare med Opus.
 3. **Finputs (steg 6).** Mobilvyn är bara grovt gjord: bilden hamnar bakom textrutan i flera steg. Prova också på en svag dator och med skärmläsare.
 4. **Granskning (steg 7)** av en fristående session, särskilt påståendena under "Att kontrollera" nedan.
 5. **Publicering (steg 8)** på Vercel.
+
+## Beslut
+
+- **Fri text är på** (Vidar, 2026-11-14). Adressen `?visning` ger ett visningsläge med bara färdiga meningar. De förberäknade exemplen är filtrerade, live-text är det inte.
 
 ## Avvikelser från planen
 
@@ -37,7 +41,6 @@ Senast uppdaterad 2026-11-14.
 
 ## Öppna frågor
 
-- **Fri text eller förvalda meningar?** Fri text är på som standard. Adressen `?visning` ger ett visningsläge med bara färdiga meningar. Basmodellen skriver ibland olämpliga saker, också för oskyldiga meningar. De förberäknade exemplen är filtrerade, de som räknas live är det inte. Räcker visningsläget, eller ska även live-text filtreras?
 - **Nedladdningen på 259 MB.** På dator hämtas modellen automatiskt, på mobil och i datasparläge först när besökaren trycker på knappen. Är det rätt avvägning?
 - **GPT-2:s tokeniserare** (1,4 MB, MIT-licens) ligger i `public/data/`. Vill vi ha jämförelsen?
 - Från planen, fortfarande öppna: licens för sidan, AI Swedens licensvillkor (läs i sin helhet före publicering, modellkort och licens ska följa med filerna på Hugging Face), namn och adress, engelsk version.
