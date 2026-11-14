@@ -12,12 +12,14 @@ Senast uppdaterad 2026-11-14.
 
 - **Modellen ligger på Hugging Face:** [HuggingVidar/gpt-sw3-126m-onnx](https://huggingface.co/HuggingVidar/gpt-sw3-126m-onnx), med licens, riktlinjer och ett modellkort som beskriver ändringarna. Sidan hämtar modellen därifrån (se `src/model/config.js`), provkört i webbläsare 2026-11-14.
 
+- **Sidan ligger på Vercel:** https://insidan-av-ai.vercel.app (projektet `insidan-av-ai`, kopplat till GitHub-repot). Första uppläggningen gjordes från arbetsgrenen och hamnade som produktionsversion, eftersom projektet saknade en sådan. Kontrollerat: den byggda sidan, datafilerna och sidhuvudena för flera processorkärnor levereras. Inte provat i en webbläsare från byggmiljön, eftersom den inte når vercel.app.
+
 ## Nästa steg
 
 1. **Texter (steg 5).** Utkasten gäller tills vidare. Vidar redigerar dem senare med Opus.
 2. **Finputs (steg 6).** Mobilvyn är bara grovt gjord: bilden hamnar bakom textrutan i flera steg. Prova också på en svag dator och med skärmläsare.
 3. **Granskning (steg 7)** av en fristående session, särskilt påståendena under "Att kontrollera" nedan.
-4. **Publicering (steg 8)** på Vercel.
+4. **Publicering (steg 8).** Sidan ligger redan uppe som förhandsversion. Kvar: lägg in arbetet i huvudgrenen `main` (Vercel bygger produktionsversionen därifrån), bestäm adress och länka från aifolkbildaren.se.
 
 ## Beslut
 
