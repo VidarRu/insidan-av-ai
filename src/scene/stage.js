@@ -85,8 +85,9 @@ const VERT = /* glsl */ `
     c = mix(c, vec3(1.0, 0.7, 0.29) * 1.6, accent);
     size *= 1.0 + 4.5 * accent;
     // Markerade bitar (sökta ord och grannar) lyser vitt
-    c = mix(c, vec3(1.0), aMark);
-    size *= 1.0 + 2.2 * aMark;
+    float mark = aMark * mix(uAccentFrom, uAccentTo, t); // bara i galaxen
+    c = mix(c, vec3(1.0), mark);
+    size *= 1.0 + 2.2 * mark;
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
