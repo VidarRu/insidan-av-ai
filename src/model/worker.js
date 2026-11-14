@@ -10,6 +10,7 @@ ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardw
 ort.env.logLevel = 'error';
 
 let tokenizer = null;
+let gpt2 = null;
 let session = null;
 let backend = null;
 let cancelled = new Set();
@@ -157,6 +158,23 @@ const handlers = {
     return { backend, threads: ort.env.wasm.numThreads };
   },
   async tokenize({ text }) { await loadTokenizer(); return encode(text); },
+  // Jämförelse: samma text med GPT-2:s engelsktränade tokeniserare. Den arbetar
+  // med byte, så en bokstav som ä kan delas mitt itu. Då visas bokstaven i den
+  // bit där den blir hel, och biten före markeras med half.
+  async tokenizeGpt2({ text }) {
+    if (!gpt2) {
+      const tj = await fetch(new URL('/data/gpt2-tokenizer.json', self.location.origin)).then((r) => r.json());
+      gpt2 = new Tokenizer(tj, {});
+    }
+    const ids = Array.from(gpt2.encode(text, { add_special_tokens: false }).ids);
+    const pieces = []; let prev = '';
+    for (let i = 0; i < ids.length; i++) {
+      const cur = gpt2.decode(ids.slice(0, i + 1), { clean_up_tokenization_spaces: false }).replace(/\uFFFD+$/, '');
+      pieces.push({ text: cur.slice(prev.length), half: cur.length === prev.length });
+      prev = cur;
+    }
+    return { pieces };
+  },
   // De mest sannolika nästa bitarna efter en text. Skickar också med alla
   // logits, så att sidan kan räkna om sannolikheterna vid en annan temperatur.
   async next({ text, k = 10, temperature = 1 }) {
@@ -182,8 +200,10 @@ const handlers = {
       else chosen = sample(probs, rand);
       if (chosen === 3) break; // <|endoftext|>
       const s = { step, id: chosen, piece: pieceOf(chosen), p: probs[chosen], top: topK(probs, k) };
+      const prevText = step === 0 ? tokenizer.decode(ids, { skip_special_tokens: true }) : steps[step - 1].text;
       ids.push(chosen);
       s.text = tokenizer.decode(ids, { skip_special_tokens: true });
+      s.added = s.text.slice(prevText.length);
       steps.push(s);
       post({ id, type: 'step', step: s });
       if (stopAtSentence && step > 3 && /[.!?]["”]?$/.test(s.text)) break;
