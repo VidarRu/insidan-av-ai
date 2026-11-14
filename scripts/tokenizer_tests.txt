@@ -1,0 +1,25 @@
+Biblioteket i Västervik ligger
+The library in Västervik is located
+Jag hällde fil på flingorna i morse.
+Bilen bytte fil precis före avfarten.
+Spara din fil innan du stänger datorn.
+Sveriges huvudstad är
+Det var en gång en
+Sjuksköterskan åkte till Örnsköldsvik för att köpa räksmörgås, å nej!
+Flygplatsförsäkringsbolagets kundtjänstmedarbetare svarade aldrig.
+Hej! Hur mår du idag? Jag mår bra, tack.
+I boken "Den sista älgen i Tranås" av författaren
+År 2026 kostade en liter mjölk 14,90 kr (cirka 1,3 €).
+E-post: info@example.se – ring 08-123 45 67.
+   Två   mellanslag  och	tabb
+En rad med emoji 🙂 och kinesiska 图书馆 samt ryska библиотека.
+Norsk: Jeg heter Kari og bor i Tromsø. Dansk: Rødgrød med fløde.
+Íslenska: Þetta er bókasafnið. Suomi: kirjasto on kiinni.
+def hello(): print("hej världen")
+ÅÄÖ åäö ÉÈ éè ü ß ñ
+Språkmodellen räknar fram sannolikheter för nästa bit, en i taget.
+Källkritik behövs även när svaret låter rätt.
+x
+ 
+Ordet slutar med blanksteg 
+Naïve café: decomposed é and precomposed é
