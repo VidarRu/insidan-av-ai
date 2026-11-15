@@ -192,6 +192,9 @@ export class Stage {
     this.tokenPts = [];
     this.pathU = 0;
     this.filPts = null; this.filActive = 0; this.filL = 0;
+    // Besökaren kan vrida bilden: yaw och pitch är vinklarna som visas just nu, ty och tp dit de är på väg
+    this.orbit = { yaw: 0, pitch: 0, ty: 0, tp: 0 };
+    this.held = new Set();
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'high-performance' });
     this.renderer = renderer;
@@ -309,7 +312,52 @@ export class Stage {
     window.addEventListener('pointermove', (e) => {
       this.pointer.set((e.clientX / window.innerWidth) * 2 - 1, (e.clientY / window.innerHeight) * 2 - 1);
     }, { passive: true });
+    this.initOrbit();
   }
+
+  // ---------- Vrida bilden ----------
+  // Dra med musen (vänster eller höger knapp), dra i sidled med fingret, eller
+  // tryck ← och →. Skift + ↑ och ↓ lutar bilden. Dubbelklick återställer.
+  initOrbit() {
+    const c = this.canvas;
+    let drag = null;
+    c.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, touch: e.pointerType === 'touch' };
+      if (!drag.touch) { try { c.setPointerCapture(e.pointerId); } catch {} }
+      c.classList.add('dragging');
+    });
+    c.addEventListener('pointermove', (e) => {
+      if (!drag || e.pointerId !== drag.id) return;
+      // Med fingret går det bara att vrida i sidled. Upp och ner scrollar sidan.
+      this.turn((drag.x - e.clientX) * 0.005, drag.touch ? 0 : (e.clientY - drag.y) * 0.005);
+      drag.x = e.clientX; drag.y = e.clientY;
+    });
+    const end = (e) => { if (drag && e.pointerId === drag.id) { drag = null; c.classList.remove('dragging'); } };
+    c.addEventListener('pointerup', end);
+    c.addEventListener('pointercancel', end);
+    c.addEventListener('contextmenu', (e) => e.preventDefault());
+    c.addEventListener('dblclick', () => this.resetOrbit());
+    window.addEventListener('keydown', (e) => {
+      if (!e.key.startsWith('Arrow') || e.altKey || e.ctrlKey || e.metaKey) return;
+      // I textfält, reglage och val gör piltangenterna redan något annat
+      if (e.target.closest && e.target.closest('input, textarea, select')) return;
+      // ↑ och ↓ utan skift scrollar sidan, alltså resan
+      if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && !e.shiftKey) return;
+      e.preventDefault();
+      this.held.add(e.key);
+    });
+    window.addEventListener('keyup', (e) => this.held.delete(e.key));
+    window.addEventListener('blur', () => this.held.clear());
+  }
+
+  turn(dYaw, dPitch) {
+    const o = this.orbit;
+    o.ty = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, o.ty + dYaw)) // som mest rakt från sidan;
+    o.tp = Math.max(-1.1, Math.min(1.1, o.tp + dPitch));
+  }
+  resetOrbit() { this.orbit.ty = this.orbit.tp = 0; }
+  get orbited() { return Math.abs(this.orbit.ty) + Math.abs(this.orbit.tp) > 0.01; }
 
   makeLine(color, max) {
     const g = new THREE.BufferGeometry();
@@ -526,7 +574,7 @@ export class Stage {
       case 1: { // inne i rummet, på väg rakt in
         const yaw = 0.3 * Math.sin(time * 0.13);
         const pos = new V3(0.15 * Math.sin(time * 0.09), 0.05, 1.3 - 1.1 * q);
-        return { pos, look: new V3(pos.x + Math.sin(yaw) * 3, 0.05 + 0.4 * Math.sin(time * 0.11), pos.z - 3) };
+        return { pos, look: new V3(pos.x + Math.sin(yaw) * 3, 0.05 + 0.4 * Math.sin(time * 0.11), pos.z - 3), turn: true };
       }
       case 2: { // följer din mening från bit till bit
         const n = this.tokenPts.length;
@@ -543,7 +591,8 @@ export class Stage {
         // Mitt emellan de tre trådarna, lite ovanför, så att ingen tråd går rakt genom kameran
         const mid = (l) => { const c = new V3(); for (let s = 0; s < 3; s++) c.add(this.filPoint(s, l)); return c.multiplyScalar(1 / 3); };
         const b = mid(L - 1), c = mid(L + 0.8);
-        return { pos: new V3(b.x * 0.5, b.y * 0.5 + 0.14, z + (this.narrow ? 3.2 : 1.9)), look: new V3(c.x * 0.6, c.y * 0.6, z - 1.2) };
+        return { pos: new V3(b.x * 0.5, b.y * 0.5 + 0.14, z + (this.narrow ? 3.2 : 1.9)), look: new V3(c.x * 0.6, c.y * 0.6, z - 1.2),
+          pivot: new V3(c.x * 0.6, c.y * 0.6, z) }; // den som vrider bilden går runt trådarnas spetsar
       }
       case 5: return { pos: new V3(0, 0, FAN_Z + (this.narrow ? 6.6 : 5.0) - 0.2 * q), look: new V3(0, 0, FAN_Z) };
       case 6: return { pos: new V3(0, 0, FAN_Z + (this.narrow ? 6.4 : 4.8) - 0.1 * q), look: new V3(0, 0, FAN_Z) };
@@ -555,7 +604,7 @@ export class Stage {
       case 8: return { pos: new V3(0, 0, FAN_Z + (this.narrow ? 7.8 : 5.7) - 0.15 * q), look: new V3(0, 0, FAN_Z) };
       case 10: { // genom solfjädern och in i strömmen
         const z = FAN_Z - 2.5 - 2 * q;
-        return { pos: new V3(0, 0, z), look: new V3(0.3 * Math.sin(time * 0.1), 0, z - 5) };
+        return { pos: new V3(0, 0, z), look: new V3(0.3 * Math.sin(time * 0.1), 0, z - 5), turn: true };
       }
       default: { // backar ut och ser hela rummet på håll
         const c = new V3(...FAR_CENTER), a = 0.25 * Math.sin(time * 0.08), r = (this.narrow ? 7 : 4.6) + 1.2 * q;
@@ -637,6 +686,8 @@ export class Stage {
     // Kamera: scenens egen åkning, och en mjuk övergång mellan två scener
     const e = smooth(t), lerp = (x, y) => x + (y - x) * e;
     const va = this.view(k, qa), vb = this.view(k + 1, qb);
+    const nearView = t < 0.5 ? va : vb;
+    const pivot = nearView.pivot ? (va.pivot || va.look).clone().lerp(vb.pivot || vb.look, e) : null;
     const pos = va.pos.lerp(vb.pos, e), look = va.look.lerp(vb.look, e);
     this.uniforms.uFog.value = lerp(A.fog, B.fog);
 
@@ -646,6 +697,26 @@ export class Stage {
     if (this.focusAmount > 0.001 && this.focus) {
       pos.lerp(this.focus.pos.clone().addScaledVector(TOKEN_OFFSET, 0.8), this.focusAmount);
       look.lerp(this.focus.pos, this.focusAmount);
+    }
+    // Besökarens egen vridning. Inne i rummet och i strömmen vrids blicken.
+    // Annars går kameran runt det den tittar på.
+    const o = this.orbit, h = this.held;
+    this.turn(((h.has('ArrowRight') ? 1 : 0) - (h.has('ArrowLeft') ? 1 : 0)) * dt * 1.4, ((h.has('ArrowUp') ? 1 : 0) - (h.has('ArrowDown') ? 1 : 0)) * dt * 1.1);
+    const ease = this.reduced ? 1 : Math.min(1, dt * 10);
+    o.yaw += (o.ty - o.yaw) * ease; o.pitch += (o.tp - o.pitch) * ease;
+    if (Math.abs(o.yaw) > 1e-4 || Math.abs(o.pitch) > 1e-4) {
+      const sph = new THREE.Spherical(), lim = (phi) => Math.max(0.2, Math.min(Math.PI - 0.2, phi));
+      if (nearView.turn) {
+        sph.setFromVector3(look.clone().sub(pos));
+        sph.theta -= o.yaw; sph.phi = lim(sph.phi - o.pitch);
+        look.copy(pos).add(new V3().setFromSpherical(sph));
+      } else {
+        const c = pivot || look.clone();
+        sph.setFromVector3(pos.clone().sub(c));
+        sph.theta += o.yaw; sph.phi = lim(sph.phi - o.pitch);
+        pos.copy(c).add(new V3().setFromSpherical(sph));
+        look.lerp(c, Math.min(1, (Math.abs(o.yaw) + Math.abs(o.pitch)) / 0.5));
+      }
     }
     if (!this.paused) { pos.x += this.pointer.x * 0.06; pos.y += -this.pointer.y * 0.04; }
     const follow = this.reduced ? 1 : Math.min(1, dt * 6);

@@ -1,6 +1,6 @@
 # Status
 
-Senast uppdaterad 2026-11-15 (tre nya scener: skevheten, efterträningen och medhållet).
+Senast uppdaterad 2026-11-15 (helskärm, vridbar bild och en inledande rad per scen).
 
 ## Klart
 
@@ -52,7 +52,16 @@ Senast uppdaterad 2026-11-15 (tre nya scener: skevheten, efterträningen och med
   - **Känt fel i mobilbredd:** meningarna över de två solfjädrarna hamnar fel (den övre bakom sidhuvudet, den nedre över solfjädern).
   - **Lutningen utan upprepning är svag.** Med "Jag har alltid gillat X" eller "Jag är emot X" i frågan, och svaret "Jag tycker att X är", ändrades sannolikheterna bara några procentenheter. Scenen bygger därför på upprepning, och rutan säger det.
 
+- **Helskärm, vridbar bild och röd tråd** (2026-11-15), efter tre önskemål från Vidar.
+  - **Helskärm:** knappen "Helskärm" i överkanten, eller tangenten F. I helskärm tonas överkanten och stegprickarna ner tills man pekar på dem. Knappen döljs där webbläsaren saknar helskärm (iPhone). När fönstret byter höjd står besökaren kvar på samma ställe i resan (`anchor` i `src/main.js`).
+  - **Vrida bilden:** dra med musen (vänster eller höger knapp), tryck ← och →, eller Skift + ↑ och ↓ för att luta. Dubbelklick eller knappen "Återställ vyn" ställer tillbaka. Som mest 90 grader åt sidan, så att lagren går att se rakt från sidan. Vridningen nollställs när man kommer till nästa scen. ↑ och ↓ utan Skift scrollar som förut, och piltangenterna vrider inte när man står i ett textfält eller reglage. Inne i rummet (scen 1) och i strömmen (scen 10) vrids blicken, i övriga scener går kameran runt det den tittar på (`initOrbit` och `frame` i `src/scene/stage.js`). Med fingret går det att dra i sidled.
+  - **Röd tråd:** varje scen 2 till 10 börjar med en ny rad som knyter an till scenen före och säger vilken fråga scenen svarar på. Scen 1 slutar med en rad som beskriver hela vägen: bitar, tolv lager, sannolikhet för nästa bit. Scenerna är 0,6 till 1 skärmhöjd längre, så att varje rad får lika lång tid som förut (sidan är nu ungefär 49 skärmhöjder).
+  - Rättat på köpet: vid minskad rörelse hoppades en rad över i scener med fem rader.
+  - **Provat** i en webbläsare utan grafikkort, 1280 × 720, utan fel i konsolen: alla inledningsrader, vridning med tangent och mus, återställning, helskärm av och på, byte av fönsterhöjd. **Inte provat:** att dra med fingret på en riktig telefon, skärmläsare, riktig dator med grafikkort.
+
 ## Nästa steg
+
+000. **Vidar läser de nya inledningsraderna** (första raden i scen 2 till 10 och sista raden i scen 1) och provar att vrida bilden, särskilt lagren från sidan.
 
 00. **Vidar tittar på de tre nya scenerna** och säger vad som känns rätt och fel. Därefter research och källor till påståendena i scen 8 och 9 (se "Att kontrollera").
 
@@ -89,6 +98,8 @@ Senast uppdaterad 2026-11-15 (tre nya scener: skevheten, efterträningen och med
 - Slutraden "Någon hjärna fanns det inte, bara en uträkning" är en formulering att ta ställning till.
 - Ny mening i scen 5 (2026-11-15): "Den mest sannolika nästa biten står i mitten och sticker ut längst. Ju längre åt sidorna, desto kortare, mörkare och mindre sannolik." Den ersätter "Ju ljusare och längre ut", som kunde läsas som längre ut åt sidorna. Stämmer med `buildFan` i `src/scene/shapes.js`.
 
+- Nya rader 2026-11-15 (röd tråd). Påståenden att granska: "Platserna ställdes in när modellen tränades" (scen 3, stod förut bara i rutan), "det som modellen är tränad för: att räkna fram vad som kan komma härnäst" (scen 5), "En sak finns inte med i uträkningen: en kontroll av om texten är sann" (scen 10, gäller modellen på sidan; chattbotar med webbsökning nämns i slutscenens ruta).
+
 - Nya påståenden i scen 7 till 9, skrivna utan att källor har lästs (Vidar: research görs i efterhand):
   - Scen 8: "I en vanlig metod får människor sätta betyg på svar. Sedan ställs modellens tal om." I rutan: att en hjälpmodell ofta tränas att förutsäga betygen (RLHF), att chattbotar tränas på exempelsamtal och att tjänster lägger en dold instruktion före samtalet.
   - Scen 9: "Efterträningen kan förstärka den, eftersom människor ofta ger högre betyg åt svar som håller med dem." I rutan: att inställsamhet kan visa sig som beröm, som ändrade svar när man säger emot och som säker ton, och att "forskare har mätt sådant hos flera stora chattbotar".
@@ -106,7 +117,10 @@ Senast uppdaterad 2026-11-15 (tre nya scener: skevheten, efterträningen och med
 - **Kan modellen alls köras på en iPhone?** Osäkert. Även i snålt läge behöver den drygt 1 GB, och det är inte provat på en riktig telefon. Vidar provar. Om det inte går finns tre förslag: (a) mobilen visar bara de färdiga exemplen, och knappen ersätts av en mening om att den levande modellen kräver en dator; (b) fler färdiga meningar, så att mobilen får mer att välja på; (c) en mindre modellfil för mobil, till exempel 8-bitarsvikter med MatMulNBits. Förslag c måste kontrolleras mot originalet, eftersom den 8-bitarsvariant som provades tidigare bara gav samma toppval i 65 procent av positionerna.
 - **Cachen på iPhone.** Koden flödar filen direkt till webbläsarens cache. Om Safari på iPhone inte klarar det, hämtar koden filen en gång till utan cache, och då laddas 259 MB ner två gånger. Inte provat.
 
-- **Tempot i resan.** Hela sidan är ungefär 41 skärmhöjder att scrolla (30 före de tre nya scenerna). Längden per scen står som `--len` i `index.html` och är lätt att ändra.
+- **Vridning på mobil.** Att dra i sidled med fingret är byggt men inte provat på en riktig telefon. Upp och ner går inte att luta där, eftersom den rörelsen scrollar.
+- **Ska vridningen ligga kvar mellan scenerna?** Nu nollställs den vid varje ny scen, så att nästa scen visas som den är tänkt.
+
+- **Tempot i resan.** Hela sidan är ungefär 49 skärmhöjder att scrolla (41 före inledningsraderna, 30 före de tre nya scenerna). Längden per scen står som `--len` i `index.html` och är lätt att ändra.
 - **Prestanda på svag dator.** Punkter nära kameran ritas stora, och det kostar mer än förut. Inte mätt på riktig hårdvara.
 
 - **Nedladdningen på 259 MB.** På dator hämtas modellen automatiskt, på mobil och i datasparläge först när besökaren trycker på knappen (på mobil även när den redan är sparad). Är det rätt avvägning?
