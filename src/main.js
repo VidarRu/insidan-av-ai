@@ -3,7 +3,7 @@
 import { Stage, FIL_COLORS } from './scene/stage.js';
 import { softmax } from './scene/shapes.js';
 import { createModelClient } from './model/client.js';
-import { MODEL_BASE, MODEL_FILE } from './model/config.js';
+import { MODEL_BASE, MODEL_WEIGHTS, MODEL_CACHE, OLD_CACHES } from './model/config.js';
 
 const $ = (sel) => document.querySelector(sel);
 const reducedQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -149,33 +149,63 @@ reducedQuery.addEventListener('change', (e) => { stage.reduced = e.matches; setP
 setPaused(reducedQuery.matches);
 
 // ---------- Modellens status ----------
-const statusEl = $('#model-status'), statusText = $('#model-status-text'), loadBtn = $('#load-model');
+const statusEl = $('#model-status'), statusText = $('#model-status-text'), loadBtn = $('#load-model'), noteEl = $('#model-note');
 function setStatus(stateName, text) { statusEl.dataset.state = stateName; statusText.textContent = text; }
+function setNote(text) { $('#model-note-text').textContent = text || ''; noteEl.hidden = !text; }
+$('#model-note-close').addEventListener('click', () => setNote(''));
+
+// Mobil och surfplatta. Där startar modellen aldrig av sig själv, och den körs i
+// ett snålare läge som tar mindre minne men räknar långsammare (se worker.js).
+const small = window.matchMedia('(max-width: 820px), (pointer: coarse)').matches;
+const lean = small || params.has('snal');
+
+// När en telefon får slut på minne stänger den hela fliken, och ingen felhantering
+// hinner köras. Därför läggs en lapp i webbläsarens lagring innan modellen startar,
+// och tas bort när starten är klar eller har misslyckats på vanligt sätt. Finns
+// lappen kvar när sidan öppnas nästa gång, blev förra försöket aldrig klart.
+const GUARD = 'insidan-modellen-startar';
+const guard = {
+  set() { try { localStorage.setItem(GUARD, String(Date.now())); } catch {} },
+  clear() { try { localStorage.removeItem(GUARD); } catch {} },
+  wasLeft() { try { return localStorage.getItem(GUARD) !== null; } catch { return false; } },
+};
+
+const CALM = 'Sidan visar i stället färdiga exempel, uträknade i förväg med samma modell. Bara egna meningar kräver modellen.';
 
 async function startModel() {
   loadBtn.hidden = true;
+  setNote('');
   setStatus('loading', 'Hämtar modellen …');
+  guard.set();
   try {
     const info = await model.loadModel((m) => {
       if (m.type === 'progress') {
-        setStatus('loading', m.cached ? 'Startar modellen …'
+        setStatus('loading', m.cached ? 'Läser in modellen …'
           : `Hämtar modellen: ${Math.round(m.loaded / 1e6)} av ${Math.round((m.total || 272e6) / 1e6)} MB`);
       } else setStatus('loading', 'Startar modellen …');
-    }, params.get('backend') || undefined);
+    }, params.get('backend') || undefined, lean);
+    guard.clear();
     state.modelReady = true;
     setStatus('ready', 'Modellen räknar i din webbläsare' + (info.backend === 'webgpu' ? ' (WebGPU)' : ''));
+    if (lean) setNote('Här räknar modellen långsammare än på en dator, för att ta mindre minne.');
     document.body.classList.add('model-ready');
     await computeNext();
   } catch (e) {
+    guard.clear();
     console.error(e);
-    setStatus('error', 'Modellen kunde inte startas. Sidan visar förberäknade exempel.');
+    setStatus('idle', 'Visar färdiga exempel');
+    setNote('Modellen gick inte att starta här. ' + CALM);
     loadBtn.hidden = false; loadBtn.textContent = 'Försök igen';
   }
 }
 loadBtn.addEventListener('click', startModel);
 
 async function modelIsCached() {
-  try { const c = await caches.open('inuti-sprakmodellen-v1'); return !!(await c.match(MODEL_BASE + MODEL_FILE)); } catch { return false; }
+  try {
+    for (const name of OLD_CACHES) await caches.delete(name); // den gamla filen behövs inte längre
+    const c = await caches.open(MODEL_CACHE);
+    return !!(await c.match(MODEL_BASE + MODEL_WEIGHTS));
+  } catch { return false; }
 }
 
 // ---------- Steg 1: meningen ----------
@@ -540,12 +570,21 @@ async function init() {
   // Tokeniseraren är liten och laddas alltid. Då klyvs också egen text direkt.
   model.loadTokenizer().then(() => { state.tokenizerReady = true; }).catch(() => {});
 
-  // Modellen är stor. På mobil och vid datasparläge hämtas den bara om besökaren ber om det.
-  const small = window.matchMedia('(max-width: 820px), (pointer: coarse)').matches;
+  // Modellen är stor. På mobil och surfplatta startar den bara när besökaren
+  // trycker på knappen, även om den redan är sparad: sidan ska alltid gå att öppna.
+  // På dator startar den direkt, utom i datasparläge (om den inte redan är sparad).
   const saveData = navigator.connection && navigator.connection.saveData;
-  if (params.has('ingenmodell')) { setStatus('idle', 'Visar förberäknade exempel'); loadBtn.hidden = false; }
-  else if ((await modelIsCached()) || (!small && !saveData)) startModel();
-  else { setStatus('idle', 'Visar förberäknade exempel'); loadBtn.hidden = false; }
+  const cached = await modelIsCached();
+  const leftOver = guard.wasLeft();
+  guard.clear();
+  setStatus('idle', 'Visar färdiga exempel');
+  if (cached) loadBtn.textContent = 'Starta modellen (redan hämtad)';
+  if (leftOver) {
+    setNote('Förra försöket att starta modellen blev inte klart, troligen för att minnet tog slut. ' + CALM);
+    loadBtn.textContent = 'Försök igen';
+    loadBtn.hidden = false;
+  } else if (params.has('ingenmodell') || small || (saveData && !cached)) loadBtn.hidden = false;
+  else startModel();
 }
 
 init().catch((e) => { console.error(e); setStatus('error', 'Något gick fel när sidan laddades.'); });
