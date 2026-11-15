@@ -6,6 +6,8 @@ public/models/
 *.onnx
 *.safetensors
 *.bin
+# Undantag: sidans egna små datafiler (under 1 MB styck) måste följa med till Vercel
+!public/data/*.bin
 __pycache__/
 .venv/
 venv/
