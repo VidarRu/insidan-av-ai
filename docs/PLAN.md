@@ -32,6 +32,20 @@ Hela sidan är alltså ett och samma partikelsystem som byter form. Det är det 
 
 **Bildspråk:** mörk bakgrund, glödande partiklar och en accentfärg som följer "din" text genom hela förloppet, så att besökaren alltid ser var den egna frågan befinner sig.
 
+### Ändrad riktning 2026-11-15: en kameraåkning inåt
+
+Den första versionen kändes som olika sidor som scrollade förbi, och bilden var inte tillräckligt slående. Efter en genomgång med Vidar gäller detta i stället:
+
+- **Ett fönster, en resa.** Inget innehåll scrollar. Scrollen styr en kamera som åker inåt: in genom hjärnans yta, genom rummet av bitar, genom de tolv lagren som en tunnel, ut till solfjädern, igenom den in i strömmen och till sist ut igen.
+- **Hjärnan är ett skal.** Kameran åker igenom det, hjärnan löses upp och där inne finns ingen hjärna. I slutet backar kameran ut och ser alla bitar utan hjärnform.
+- **Meningen skrivs allra först**, framför hjärnan, och följs sedan in.
+- **Undertexter och en smal list** i stället för textrutor. En eller två rader i taget längst ner, reglagen i en list under dem. Bilden får hela skärmen.
+- **Siffrorna står i bilden**, på punkterna och trådarna. Listor och tabeller finns kvar i fällbara rutor, också för skärmläsare.
+- **Viktigast är känslan av att vara inuti**: punkter åt alla håll, djup och rörelse. Därefter att det är på riktigt, och att det är vackert.
+- **Byggs för dator först.** Mobilen ska fungera men är inte utgångspunkten.
+
+Resans ordning följer uträkningens ordning (bitar, lager, sannolikheter). Djupet i bilden är ett berättargrepp, och det står i rutan "Så här är det egentligen" i scen 1.
+
 ## Berättelsens steg
 
 Sidan har nio scrollsteg som följer en och samma mening, den som besökaren själv skriver, från inmatning till svar. Steg 2, 5, 6 och 7 bygger på riktiga beräkningar. Övriga steg är förklarande animationer.

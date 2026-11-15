@@ -1,6 +1,6 @@
 # Status
 
-Senast uppdaterad 2026-11-15.
+Senast uppdaterad 2026-11-15 (kameraåkningen).
 
 ## Klart
 
@@ -16,12 +16,22 @@ Senast uppdaterad 2026-11-15.
 
 - **Sidan ligger på Vercel:** https://insidan-av-ai.vercel.app (projektet `insidan-av-ai`, kopplat till GitHub-repot). Första uppläggningen gjordes från arbetsgrenen och hamnade som produktionsversion, eftersom projektet saknade en sådan. Kontrollerat: den byggda sidan, datafilerna och sidhuvudena för flera processorkärnor levereras. Inte provat i en webbläsare från byggmiljön, eftersom den inte når vercel.app.
 
+- **Ombyggd till en kameraåkning inåt** (2026-11-15), efter Vidars två invändningar: för lite häpnad, och känslan av att scrolla mellan olika sidor. Besluten står i `docs/PLAN.md` under "Ändrad riktning". Det som är gjort:
+  - Inget innehåll scrollar längre. Varje scen är en sträcka att scrolla, och scrollen flyttar kameran (`updateProgress` i `src/main.js`, `view()` i `src/scene/stage.js`).
+  - Resan: utanför hjärnan, in genom ytan, runt i rummet av bitar, från bit till bit längs din mening, till ett sökt ord, genom tolv lager som en tunnel, ut till solfjädern, igenom den in i strömmen, och ut igen.
+  - Djup i bilden: punkter långt bort bleknar, punkter nära blir stora och mjuka, och de allra närmaste tonas bort.
+  - Meningen skrivs i inledningen. Texten står som undertexter, reglagen i en list, och mitt i en övergång är bilden helt ren.
+  - Siffror i bilden: likhetstal vid grannarna till ett sökt ord, och likheten mellan de tre trådarna för "fil" efter varje lager (uppmätta värden, inga mellanvärden).
+  - Tangentbord: den som tabbar till ett reglage i en annan scen åker dit. Vid minskad rörelse byter bilden mellan fasta lägen utan åkning.
+  - Provat i en webbläsare utan grafikkort i byggmiljön, i 1280 × 720 och i mobilbredd, utan fel i konsolen. Inte provat: riktig dator med grafikkort, modellen laddad, skärmläsare.
+
 ## Nästa steg
 
 1. **Texter (steg 5).** Utkasten gäller tills vidare. Vidar redigerar dem senare med Opus.
-2. **Finputs (steg 6).** Mobilvyn är bara grovt gjord: bilden hamnar bakom textrutan i flera steg. Prova också på en svag dator och med skärmläsare.
-3. **Granskning (steg 7)** av en fristående session, särskilt påståendena under "Att kontrollera" nedan.
-4. **Publicering (steg 8).** Sidan ligger redan uppe som förhandsversion. Kvar: lägg in arbetet i huvudgrenen `main` (Vercel bygger produktionsversionen därifrån), bestäm adress och länka från aifolkbildaren.se.
+2. **Vidar provar den nya resan** och säger vad som känns rätt och fel: tempo, ljus, hur länge varje scen varar.
+3. **Finputs (steg 6).** Mobilvyn är grovt gjord: listen med reglage tar stor plats. Prova också på en svag dator och med skärmläsare.
+4. **Granskning (steg 7)** av en fristående session, särskilt påståendena under "Att kontrollera" nedan.
+5. **Publicering (steg 8).** Sidan ligger redan uppe som förhandsversion. Kvar: lägg in arbetet i huvudgrenen `main` (Vercel bygger produktionsversionen därifrån), bestäm adress och länka från aifolkbildaren.se.
 
 ## Beslut
 
@@ -34,7 +44,8 @@ Senast uppdaterad 2026-11-15.
 - **16-bitars lagring i stället för 8-bitars.** En vanlig 8-bitarsmodell (177 MB) gav samma toppval i bara 65 procent av positionerna och sköt sannolikheterna med upp till 9 procentenheter. Filen på 259 MB ger samma siffror som originalet.
 - **Attention i steg 4 visas utan meningens första bit.** I den här modellen hamnar omkring 70 procent av vikten där. Det står i rutan.
 - **Det förberäknade hallucinationsexemplet** handlar om ett påhittat Nobelpris i stället för en påhittad bok. Med boken skrev modellen ut namn på verkliga författare.
-- **Ingen glödeffekt (bloom).** Den lade en grå dimma över bilden och kostar prestanda på svaga datorer.
+- **Ingen glödeffekt (bloom).** Den lade en grå dimma över bilden och kostar prestanda på svaga datorer. Djupet görs i stället i partiklarnas egen shader.
+- **Strömmen i hallucinationsscenen** är ett rör av partiklar runt kameran, inte ett band bakom texten.
 
 ## Att kontrollera (granskningen)
 
@@ -44,7 +55,13 @@ Senast uppdaterad 2026-11-15.
 - Påståendet att forskare är oeniga om vad attention-vikter förklarar (steg 4) saknar källa på sidan.
 - "Stockholm får omkring 3 procent" (steg 5) är uträknat: 3,4 procent.
 
+- Nya påståenden i texten: "Ordningen följer uträkningen: först bitarna, sedan lagren och sist sannolikheterna" (scen 1) och "Lagren är inga skivor i ett rum. Ett lager är ett steg i uträkningen" (scen 4).
+- Slutraden "Någon hjärna fanns det inte, bara en uträkning" är en formulering att ta ställning till.
+
 ## Öppna frågor
+
+- **Tempot i resan.** Hela sidan är ungefär 30 skärmhöjder att scrolla. Längden per scen står som `--len` i `index.html` och är lätt att ändra.
+- **Prestanda på svag dator.** Punkter nära kameran ritas stora, och det kostar mer än förut. Inte mätt på riktig hårdvara.
 
 - **Nedladdningen på 259 MB.** På dator hämtas modellen automatiskt, på mobil och i datasparläge först när besökaren trycker på knappen. Är det rätt avvägning?
 - **GPT-2:s tokeniserare** (1,4 MB, MIT-licens) ligger i `public/data/`. Vill vi ha jämförelsen?

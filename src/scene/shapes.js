@@ -133,33 +133,46 @@ export function buildDust() {
   return { pos };
 }
 
+// ---------- Världen: resan går inåt längs z-axeln, mot minus ----------
+// Hjärnan och rummet ligger runt origo. Längre in kommer lagren som en tunnel,
+// sedan solfjädern, strömmen och till sist rummet sett på avstånd.
+export const GALAXY_IN = 2.6;          // rummet när kameran är inuti det
+export const GALAXY_FAR = 1.7;         // rummet sett utifrån i slutet
+export const THREAD_Z0 = -9;           // där trådarna för "fil" börjar
+export const LAYER_GAP = 1.1;          // avstånd mellan två lager
+export const LAYER_HALF = 1.5;
+export const FAN_Z = -28.5;
+export const STREAM_Z0 = FAN_Z - 1, STREAM_LEN = 14;
+export const FAR_CENTER = [0, 0, FAN_Z - 9.5];
+
 // ---------- Galaxen: de riktiga platserna från modellens ordvektorer ----------
-export const GALAXY_SCALE = 1.7;
-export function buildGalaxy(int16) {
+export function buildGalaxy(int16, scale = GALAXY_IN, center = [0, 0, 0]) {
   const pos = new Float32Array(N * 3);
-  for (let i = 0; i < N * 3; i++) pos[i] = (int16[i] / 32767) * GALAXY_SCALE;
+  for (let i = 0; i < N * 3; i++) pos[i] = (int16[i] / 32767) * scale + center[i % 3];
   return { pos };
 }
 
-// ---------- Lagren: tolv staplade skikt ----------
-export const LAYER_BOTTOM = -0.95, LAYER_TOP = 0.95, LAYER_HALF = 0.82;
-export function layerY(l) { return LAYER_BOTTOM + (l / (N_LAYERS - 1)) * (LAYER_TOP - LAYER_BOTTOM); }
+// ---------- Lagren: tolv skikt på rad, som kameran åker igenom ----------
+// Trådens punkt j (0..12) ligger vid threadZ(j). Lager l (1..12) ligger mitt
+// emellan punkt l-1 och punkt l.
+export function threadZ(j) { return THREAD_Z0 - j * LAYER_GAP; }
+export function layerZ(l) { return THREAD_Z0 - (l - 0.5) * LAYER_GAP; }
 export function buildLayers() {
   const rand = mulberry(31);
   const pos = new Float32Array(N * 3);
   const perLayer = Math.ceil(N / N_LAYERS), side = Math.ceil(Math.sqrt(perLayer));
   for (let i = 0; i < N; i++) {
     const l = i % N_LAYERS, k = Math.floor(i / N_LAYERS);
-    const gx = k % side, gz = Math.floor(k / side);
-    pos[i * 3] = ((gx + 0.5) / side * 2 - 1) * LAYER_HALF + (rand() - 0.5) * 0.004;
-    pos[i * 3 + 1] = layerY(l) + (rand() - 0.5) * 0.012;
-    pos[i * 3 + 2] = ((gz + 0.5) / side * 2 - 1) * LAYER_HALF + (rand() - 0.5) * 0.004;
+    const gx = k % side, gy = Math.floor(k / side);
+    pos[i * 3] = ((gx + rand()) / side * 2 - 1) * LAYER_HALF;
+    pos[i * 3 + 1] = ((gy + rand()) / side * 2 - 1) * LAYER_HALF;
+    pos[i * 3 + 2] = layerZ(l + 1) + (rand() - 0.5) * 0.02;
   }
   return { pos };
 }
 
 // ---------- Solfjädern: en partikel per möjlig nästa bit ----------
-export const FAN_PIVOT = [0, -1.05, 0];
+export const FAN_PIVOT = [0, -1.05, FAN_Z];
 const FAN_SPREAD = (80 * Math.PI) / 180;
 const FAN_INNER = 0.5, FAN_OUTER = 2.1;
 
@@ -205,18 +218,17 @@ export function buildFan(probs, out) {
   return { pos, bright, order };
 }
 
-// ---------- Strömmen: text som rinner fram, bit för bit ----------
+// ---------- Strömmen: bitar som rinner förbi runt kameran ----------
+// Ett rör av partiklar längs z-axeln. Mitten är tom, där står texten.
 export function buildStream() {
   const rand = mulberry(47);
   const pos = new Float32Array(N * 3);
   for (let i = 0; i < N; i++) {
-    const t = rand() * 2 - 1;
-    const x = t * 3.4;
-    const band = Math.floor(rand() * 5) - 2;
-    const wave = Math.sin(x * 1.3 + band * 0.9) * 0.28 + Math.sin(x * 0.55 + band * 2.1) * 0.22;
-    const spread = 0.05 + 0.1 * Math.abs(noise3(x * 0.8, band, 0));
-    const g = (rand() + rand() + rand() - 1.5) * spread * 2;
-    pos[i * 3] = x; pos[i * 3 + 1] = wave + band * 0.2 + g; pos[i * 3 + 2] = Math.cos(x * 0.9 + band) * 0.5 + (rand() - 0.5) * 0.12 - 0.3;
+    const z = rand() * STREAM_LEN;
+    const band = Math.floor(rand() * 9);
+    const a = band * (Math.PI * 2 / 9) + z * 0.22 + (rand() + rand() - 1) * 0.28;
+    const r = 1.25 + 0.35 * Math.sin(band * 1.7 + z * 0.5) + 1.6 * Math.pow(rand(), 2.2);
+    pos[i * 3] = Math.cos(a) * r * 1.35; pos[i * 3 + 1] = Math.sin(a) * r * 0.85; pos[i * 3 + 2] = STREAM_Z0 - z;
   }
   return { pos };
 }
