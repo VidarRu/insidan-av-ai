@@ -68,6 +68,7 @@ Senast uppdaterad 2026-11-15 (mobilkraschen).
 
 - Nya påståenden i texten: "Ordningen följer uträkningen: först bitarna, sedan lagren och sist sannolikheterna" (scen 1) och "Lagren är inga skivor i ett rum. Ett lager är ett steg i uträkningen" (scen 4).
 - Slutraden "Någon hjärna fanns det inte, bara en uträkning" är en formulering att ta ställning till.
+- Ny mening i scen 5 (2026-11-15): "Den mest sannolika nästa biten står i mitten och sticker ut längst. Ju längre åt sidorna, desto kortare, mörkare och mindre sannolik." Den ersätter "Ju ljusare och längre ut", som kunde läsas som längre ut åt sidorna. Stämmer med `buildFan` i `src/scene/shapes.js`.
 
 ## Öppna frågor
 
