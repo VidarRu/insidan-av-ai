@@ -3,7 +3,7 @@
 // ONNX Runtime Web är samma byggstenar som Transformers.js använder.
 import * as ort from 'onnxruntime-web/webgpu';
 import { Tokenizer } from '@huggingface/tokenizers';
-import { MODEL_BASE, MODEL_FILE, N_LAYER, N_HEAD, HEAD_DIM } from './config.js';
+import { MODEL_BASE, MODEL_GRAPH, MODEL_WEIGHTS, MODEL_CACHE, OLD_CACHES, N_LAYER, N_HEAD, HEAD_DIM } from './config.js';
 
 ort.env.wasm.wasmPaths = new URL('/ort/', self.location.origin).href;
 ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 1) : 1;
@@ -17,26 +17,76 @@ let cancelled = new Set();
 
 const post = (msg, transfer) => self.postMessage(msg, transfer || []);
 
-async function fetchWithProgress(url, onProgress) {
-  let cache = null;
-  try { cache = await caches.open('inuti-sprakmodellen-v1'); } catch {}
-  const hit = cache && (await cache.match(url));
-  if (hit) { onProgress(1, 1, true); return new Uint8Array(await hit.arrayBuffer()); }
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Kunde inte hämta ${url} (${res.status})`);
-  const total = Number(res.headers.get('content-length')) || 0;
+async function openCache() {
+  if (!self.caches) return null;
+  try {
+    for (const name of OLD_CACHES) await caches.delete(name);
+    return await caches.open(MODEL_CACHE);
+  } catch { return null; }
+}
+
+// Läser en nedladdning rakt in i en enda buffert av rätt storlek. Ingen lista
+// med bitar som sätts ihop efteråt, och ingen arrayBuffer(), som i Chromium
+// tillfälligt tar ungefär dubbelt så mycket minne som filen.
+async function readAll(res, total, onBytes) {
   const reader = res.body.getReader();
-  const chunks = []; let loaded = 0;
+  let buf = new Uint8Array(total), loaded = 0;
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
-    chunks.push(value); loaded += value.length;
-    onProgress(loaded, total, false);
+    if (loaded + value.length > buf.length) {
+      // Storleken var okänd eller fel. Hugging Face anger den, så det här är en reserv.
+      const bigger = new Uint8Array(Math.max(2 * buf.length, loaded + value.length));
+      bigger.set(buf.subarray(0, loaded)); buf = bigger;
+    }
+    buf.set(value, loaded); loaded += value.length;
+    onBytes?.(loaded);
   }
-  const buf = new Uint8Array(loaded); let o = 0;
-  for (const c of chunks) { buf.set(c, o); o += c.length; }
-  if (cache) {
-    try { await cache.put(url, new Response(buf, { headers: { 'content-type': 'application/octet-stream' } })); } catch {}
+  return buf.subarray(0, loaded);
+}
+
+async function roomFor(bytes) {
+  try { const { quota, usage } = await navigator.storage.estimate(); return quota - usage > bytes * 1.2; } catch { return true; }
+}
+
+async function download(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Kunde inte hämta ${url} (${res.status})`);
+  return res;
+}
+
+// Hämtar en fil så att den bara finns en gång i minnet åt gången. Första
+// gången flödar den direkt till webbläsarens cache (till disken), och läses
+// sedan tillbaka in i en buffert. Utan cache läses den direkt in i bufferten.
+async function fetchFile(url, onProgress = () => {}) {
+  const cache = await openCache();
+  let res = cache && (await cache.match(url));
+  const cached = !!res;
+  if (!res) {
+    res = await download(url);
+    const total = Number(res.headers.get('content-length')) || 0;
+    if (cache && total && (await roomFor(total))) {
+      let loaded = 0;
+      const count = new TransformStream({ transform(chunk, ctl) { loaded += chunk.length; onProgress(loaded, total, false); ctl.enqueue(chunk); } });
+      try {
+        await cache.put(url, new Response(res.body.pipeThrough(count), {
+          headers: { 'content-type': 'application/octet-stream', 'content-length': String(total) },
+        }));
+        res = await cache.match(url);
+        if (!res) throw new Error('Filen sparades inte');
+      } catch (e) {
+        // Sparandet misslyckades, till exempel för att disken var full. Hämta en gång till, utan cache.
+        console.warn('Kunde inte spara i cachen:', e);
+        try { await cache.delete(url); } catch {}
+        res = await download(url);
+      }
+    }
+  }
+  const total = Number(res.headers.get('content-length')) || 0;
+  const buf = await readAll(res, total, (n) => onProgress(n, total, cached));
+  if (total && buf.length !== total) {
+    if (cache) { try { await cache.delete(url); } catch {} }
+    throw new Error(`${url} blev ofullständig (${buf.length} av ${total} byte)`);
   }
   return buf;
 }
@@ -54,23 +104,45 @@ async function hasWebGPU() {
   try { return !!(navigator.gpu && (await navigator.gpu.requestAdapter())); } catch { return false; }
 }
 
-async function loadModel(id, prefer) {
+// lean = snålt läge för mobil: vikterna görs om från 16 till 32 bitar varje
+// gång modellen räknar, i stället för en gång för alla vid starten. Uppmätt i
+// Chromium 2026-11-15, bara modellen: 1,2–1,3 GB i stället för 1,6–1,75 GB som
+// mest, men varje ny bit tar ungefär dubbelt så lång tid (170–200 ms mot 88 ms).
+// Toppvalen blir desamma (logits skiljer högst 0,00003, se scripts/split_onnx.py).
+async function loadModel(id, prefer, lean) {
   if (session) return;
-  const bytes = await fetchWithProgress(MODEL_BASE + MODEL_FILE, (loaded, total, cached) =>
+  let graph = await fetchFile(MODEL_BASE + MODEL_GRAPH);
+  let weights = await fetchFile(MODEL_BASE + MODEL_WEIGHTS, (loaded, total, cached) =>
     post({ id, type: 'progress', loaded, total, cached }));
   post({ id, type: 'status', status: 'startar' });
+  const options = lean
+    ? { graphOptimizationLevel: 'disabled', enableCpuMemArena: false, enableMemPattern: false }
+    : { graphOptimizationLevel: 'all' };
   const tryOrder = [];
-  if (prefer !== 'wasm' && (await hasWebGPU())) tryOrder.push('webgpu');
+  // WebGPU provas inte i snålt läge: det är oprovat på mobil och kan lägga minne både här och i grafikkortet.
+  if (!lean && prefer !== 'wasm' && (await hasWebGPU())) tryOrder.push('webgpu');
   tryOrder.push('wasm');
   let lastErr;
   for (const ep of tryOrder) {
     try {
-      session = await ort.InferenceSession.create(bytes, { executionProviders: [ep], graphOptimizationLevel: 'all' });
+      session = await ort.InferenceSession.create(graph, {
+        executionProviders: [ep], ...options,
+        externalData: [{ path: MODEL_WEIGHTS.split('/').pop(), data: weights }],
+      });
       backend = ep;
+      // ONNX Runtime har nu en egen kopia av vikterna. Är det sista försöket behövs
+      // sidans kopia inte längre, och den släpps innan provkörningen tar mer minne.
+      if (ep === tryOrder[tryOrder.length - 1]) graph = weights = null;
       // Provkör en gång, så att fel i grafikkortet upptäcks här och inte mitt i berättelsen.
       await forward([2], null);
+      graph = weights = null;
       return;
-    } catch (e) { lastErr = e; session = null; }
+    } catch (e) {
+      lastErr = e;
+      // Släpp det misslyckade försöket helt innan nästa provas, så att två modeller inte ligger i minnet.
+      if (session) { try { await session.release(); } catch {} }
+      session = null; backend = null;
+    }
   }
   throw lastErr;
 }
@@ -153,8 +225,8 @@ const BANNED = [0, 1, 2]; // <pad>, <unk>, <s> ska aldrig väljas
 
 const handlers = {
   async loadTokenizer() { await loadTokenizer(); return { ok: true }; },
-  async loadModel({ id, prefer }) {
-    await loadTokenizer(); await loadModel(id, prefer);
+  async loadModel({ id, prefer, lean }) {
+    await loadTokenizer(); await loadModel(id, prefer, lean);
     return { backend, threads: ort.env.wasm.numThreads };
   },
   async tokenize({ text }) { await loadTokenizer(); return encode(text); },

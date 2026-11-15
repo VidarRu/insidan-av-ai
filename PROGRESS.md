@@ -1,6 +1,6 @@
 # Status
 
-Senast uppdaterad 2026-11-15 (kameraåkningen).
+Senast uppdaterad 2026-11-15 (mobilkraschen).
 
 ## Klart
 
@@ -25,8 +25,19 @@ Senast uppdaterad 2026-11-15 (kameraåkningen).
   - Tangentbord: den som tabbar till ett reglage i en annan scen åker dit. Vid minskad rörelse byter bilden mellan fasta lägen utan åkning.
   - Provat i en webbläsare utan grafikkort i byggmiljön, i 1280 × 720 och i mobilbredd, utan fel i konsolen. Inte provat: riktig dator med grafikkort, modellen laddad, skärmläsare.
 
+- **Kraschen på mobil är åtgärdad** (2026-11-15). Vidars iPhone (Chrome) visade "Det går inte att öppna den här sidan" varje gång, efter att modellen hade sparats. Orsaken var minnet. Uppmätt i Chromium på dator, bara modellen utan partiklar: **2,2 GB** som mest för en fil på 259 MB. Nedladdningen stod för cirka 600 MB av det och ONNX Runtime för resten. Den förberäknar alla vikter som 32-bitarstal (543 MB), gör en vänd kopia av ordtabellen (197 MB) och kopierar vikterna ur filen en gång till. Det här är gjort:
+  - **På mobil och surfplatta startar modellen bara när man trycker på knappen**, även när den redan är sparad. Knappen säger då "Starta modellen (redan hämtad)".
+  - **Ny modellfil på Hugging Face**, med samma vikter byte för byte: `onnx/model_split.onnx` (grafen) och `onnx/model_split.onnx_data` (vikterna). Vikterna ligger i en egen fil, och sista steget görs med Gemm i stället för en vänd kopia. Skriptet är `scripts/split_onnx.py`. Kontroll: samma logits som `model.onnx` (skillnad 0). Den gamla filen ligger kvar.
+  - **Snålt läge på mobil**: vikterna görs om till 32 bitar först när de används. Logits skiljer högst 0,00003, och toppvalen är desamma. Priset är att varje ny bit tar ungefär dubbelt så lång tid. WebGPU provas inte i snålt läge.
+  - **Nedladdningen** läses rakt in i en enda buffert. Första gången flödar filen till webbläsarens cache och läses sedan tillbaka, så filen finns bara en gång i minnet åt gången. Den gamla cachen (`inuti-sprakmodellen-v1`, 259 MB) tas bort.
+  - **Om WebGPU misslyckas** släpps den halvfärdiga modellen innan WebAssembly provas.
+  - **Om starten misslyckas** säger sidan lugnt att den visar färdiga exempel i stället. En telefon som får slut på minne stänger hela fliken utan att någon felhantering hinner köras. Därför lägger sidan en lapp i webbläsarens lagring före starten. Finns lappen kvar nästa gång, säger sidan att förra försöket inte blev klart och startar inte modellen av sig själv, inte heller på dator.
+  - Uppmätt toppminne för hela sidan i Chromium: dator 1,8 GB (förut 2,2 GB plus sidan). Mobilläge (emulerad iPhone): 1,2 GB vid start från cachen och 1,4 GB vid första nedladdningen. Fart på dator i WebAssembly: 88 ms per ny bit i vanligt läge och 170–200 ms i snålt läge.
+  - **Inte provat**: en riktig iPhone. Apple anger ingen fast minnesgräns för en flik i Safari eller Chrome på iPhone.
+
 ## Nästa steg
 
+0. **Vidar provar på sin iPhone** (PR:en med mobilrättningen). Sidan ska alltid gå att öppna. Tryck sedan på knappen och se om modellen startar eller om det lugna meddelandet visas.
 1. **Texter (steg 5).** Utkasten gäller tills vidare. Vidar redigerar dem senare med Opus.
 2. **Vidar provar den nya resan** och säger vad som känns rätt och fel: tempo, ljus, hur länge varje scen varar.
 3. **Finputs (steg 6).** Mobilvyn är grovt gjord: listen med reglage tar stor plats. Prova också på en svag dator och med skärmläsare.
@@ -60,10 +71,13 @@ Senast uppdaterad 2026-11-15 (kameraåkningen).
 
 ## Öppna frågor
 
+- **Kan modellen alls köras på en iPhone?** Osäkert. Även i snålt läge behöver den drygt 1 GB, och det är inte provat på en riktig telefon. Vidar provar. Om det inte går finns tre förslag: (a) mobilen visar bara de färdiga exemplen, och knappen ersätts av en mening om att den levande modellen kräver en dator; (b) fler färdiga meningar, så att mobilen får mer att välja på; (c) en mindre modellfil för mobil, till exempel 8-bitarsvikter med MatMulNBits. Förslag c måste kontrolleras mot originalet, eftersom den 8-bitarsvariant som provades tidigare bara gav samma toppval i 65 procent av positionerna.
+- **Cachen på iPhone.** Koden flödar filen direkt till webbläsarens cache. Om Safari på iPhone inte klarar det, hämtar koden filen en gång till utan cache, och då laddas 259 MB ner två gånger. Inte provat.
+
 - **Tempot i resan.** Hela sidan är ungefär 30 skärmhöjder att scrolla. Längden per scen står som `--len` i `index.html` och är lätt att ändra.
 - **Prestanda på svag dator.** Punkter nära kameran ritas stora, och det kostar mer än förut. Inte mätt på riktig hårdvara.
 
-- **Nedladdningen på 259 MB.** På dator hämtas modellen automatiskt, på mobil och i datasparläge först när besökaren trycker på knappen. Är det rätt avvägning?
+- **Nedladdningen på 259 MB.** På dator hämtas modellen automatiskt, på mobil och i datasparläge först när besökaren trycker på knappen (på mobil även när den redan är sparad). Är det rätt avvägning?
 - **GPT-2:s tokeniserare** (1,4 MB, MIT-licens) ligger i `public/data/`. Vill vi ha jämförelsen?
 - **AI Swedens licens** är läst. Vidaredistribution av ändrade versioner är tillåten om licensen och riktlinjerna följer med, upphovet anges (AI Sweden, RISE, WASP), ändringarna beskrivs och inget antyder att de står bakom versionen. Det är gjort i modellkortet och i sidfoten. Licensen kräver också att användare av en tjänst som bygger på modellen får veta det och kan nå villkoren: sidfoten länkar dit. En jurist har inte läst detta.
 - Från planen, fortfarande öppna: licens för sidan, namn och adress, engelsk version.
@@ -72,5 +86,7 @@ Senast uppdaterad 2026-11-15 (kameraåkningen).
 
 - Molnmiljön heter `insidan-av-ai` och har åtkomst till Hugging Face. Hämta med `HF_HUB_DISABLE_XET=1`.
 - Modellfilerna finns inte i Git. Sidan hämtar dem från Hugging Face. Miljön har en sparad skrivnyckel för `huggingface.co`, som proxyn sätter in automatiskt.
-- Starta med `npm install` och `npm run dev`. `?ingenmodell` stänger av modellen, `?backend=wasm` tvingar WebAssembly.
+- Starta med `npm install` och `npm run dev`. `?ingenmodell` stänger av modellen, `?backend=wasm` tvingar WebAssembly och `?snal` ger mobilens snåla läge på dator.
+- Sidan hämtar `onnx/model_split.onnx` och `onnx/model_split.onnx_data` (se `src/model/config.js`). Lokalt: lägg dem i `public/models/gpt-sw3-126m/onnx/` tillsammans med `tokenizer.json` och `tokenizer_config.json`, och starta med `VITE_MODEL_BASE=/models/gpt-sw3-126m/ npm run dev`.
+- Minnet mäts enklast med Playwright: läs av processen `--type=renderer` med `ps` medan modellen startar. En tillfällig Playwright-profil har lite lagringsutrymme, så där sparas modellen aldrig i cachen. Använd `launchPersistentContext` för att prova cachen.
 - WebGPU är inte provat (testmiljön har inget grafikkort). Koden väljer WebGPU när det finns och provkör en gång innan den litar på det.

@@ -14,6 +14,9 @@ python scripts/convert_tokenizer.py src-model out
 optimum-cli export onnx --model src-model --task text-generation-with-past --opset 17 onnx-export
 # 4. Krymp filen (16-bitars lagring, ordtabellen sparas en gång): 740 MB blir 259 MB
 python scripts/shrink_onnx.py onnx-export/model.onnx out/onnx/model.onnx
+# 4b. Dela filen i graf och vikter, så att webbläsaren behöver mindre minne (sidan använder den här)
+pip install onnxruntime   # bara för kontrollen i slutet av skriptet
+python scripts/split_onnx.py out/onnx/model.onnx out/onnx/model_split.onnx
 cp onnx-export/config.json onnx-export/generation_config.json src-model/LICENSE src-model/GPT-SW3_MODEL_GUIDELINES out/
 # 5. Kontrollera att den krympta modellen räknar fram samma sannolikheter som originalet
 python scripts/compare_variants.py src-model out onnx/model.onnx

@@ -21,7 +21,7 @@ export function createModelClient() {
   }
   return {
     loadTokenizer: () => call('loadTokenizer'),
-    loadModel: (onEvent, prefer) => call('loadModel', { prefer }, onEvent),
+    loadModel: (onEvent, prefer, lean) => call('loadModel', { prefer, lean }, onEvent),
     tokenize: (text) => call('tokenize', { text }),
     tokenizeGpt2: (text) => call('tokenizeGpt2', { text }),
     next: (text, opts = {}) => call('next', { text, ...opts }),
