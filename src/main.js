@@ -433,8 +433,10 @@ setInterval(() => { if (currentStep !== lastStepSeen) { lastStepSeen = currentSt
 
 // ---------- Start ----------
 async function loadData() {
-  const bin = (name) => fetch(`/data/${name}`).then((r) => r.arrayBuffer());
-  const json = (name) => fetch(`/data/${name}`).then((r) => r.json());
+  // En fil som saknas ska ge ett tydligt fel, inte ett felmeddelande som läses som data.
+  const get = (name) => fetch(`/data/${name}`).then((r) => { if (!r.ok) throw new Error(`/data/${name} saknas (${r.status})`); return r; });
+  const bin = (name) => get(name).then((r) => r.arrayBuffer());
+  const json = (name) => get(name).then((r) => r.json());
   const [vocab, galaxy, words, neighbors, neighborsSim, examples, exLogits, fil] = await Promise.all([
     json('vocab.json'), bin('galaxy.bin'), bin('words.bin'), bin('neighbors.bin'), bin('neighbors_sim.bin'),
     json('examples.json'), bin('examples_logits.bin'), json('fil.json'),

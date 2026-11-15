@@ -1,6 +1,6 @@
 # Status
 
-Senast uppdaterad 2026-11-14.
+Senast uppdaterad 2026-11-15.
 
 ## Klart
 
@@ -11,6 +11,8 @@ Senast uppdaterad 2026-11-14.
 - **Ett första utkast till alla texter** och rutorna "Så här är det egentligen" (steg 5 i planen). De behöver läsas av Vidar och granskas.
 
 - **Modellen ligger på Hugging Face:** [HuggingVidar/gpt-sw3-126m-onnx](https://huggingface.co/HuggingVidar/gpt-sw3-126m-onnx), med licens, riktlinjer och ett modellkort som beskriver ändringarna. Sidan hämtar modellen därifrån (se `src/model/config.js`), provkört i webbläsare 2026-11-14.
+
+- **Felet "Något gick fel när sidan laddades" är rättat** (2026-11-15). Fem datafiler i `public/data/` (`galaxy.bin`, `words.bin`, `neighbors.bin`, `neighbors_sim.bin`, `examples_logits.bin`, sammanlagt 1,9 MB) hade aldrig kommit in i Git, eftersom `.gitignore` stängde ute alla `.bin`-filer. Vercel bygger från GitHub och fick därför inte med dem. Filerna är framräknade på nytt med `build_galaxy.py` och `precompute.py`. Kontroll: samma körning gav `vocab.json`, `examples.json` och `fil.json` byte för byte identiska med de som redan låg i Git. `.gitignore` har nu ett undantag för `public/data/*.bin`, och sidan säger i konsolen vilken fil som saknas om det händer igen. Galaxens form kommer från en ny UMAP-körning med samma slumpfrö, så den kan skilja sig lite från den som visades lokalt tidigare.
 
 - **Sidan ligger på Vercel:** https://insidan-av-ai.vercel.app (projektet `insidan-av-ai`, kopplat till GitHub-repot). Första uppläggningen gjordes från arbetsgrenen och hamnade som produktionsversion, eftersom projektet saknade en sådan. Kontrollerat: den byggda sidan, datafilerna och sidhuvudena för flera processorkärnor levereras. Inte provat i en webbläsare från byggmiljön, eftersom den inte når vercel.app.
 
