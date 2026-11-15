@@ -196,7 +196,8 @@ export function fanAngle(rank, n) {
   return side * FAN_SPREAD * Math.pow(Math.log(1 + m) / Math.log(1 + n / 2), 0.6);
 }
 
-export function buildFan(probs, out) {
+// offset flyttar hela solfjädern i sidled och höjdled, när två står bredvid varandra.
+export function buildFan(probs, out, offset = [0, 0]) {
   const n = probs.length;
   const order = new Uint32Array(n);
   for (let i = 0; i < n; i++) order[i] = i;
@@ -210,8 +211,8 @@ export function buildFan(probs, out) {
     const radius = FAN_INNER + (FAN_OUTER - FAN_INNER) * lp;
     // Bitar med nästan ingen sannolikhet bildar en mjuk kant längst in
     const rr = lp > 0 ? radius : radius * (0.35 + 0.65 * Math.sqrt(hash3(id, 17, 3)));
-    pos[id * 3] = FAN_PIVOT[0] + Math.sin(angle) * rr;
-    pos[id * 3 + 1] = FAN_PIVOT[1] + Math.cos(angle) * rr;
+    pos[id * 3] = FAN_PIVOT[0] + offset[0] + Math.sin(angle) * rr;
+    pos[id * 3 + 1] = FAN_PIVOT[1] + offset[1] + Math.cos(angle) * rr;
     pos[id * 3 + 2] = FAN_PIVOT[2] + (hash3(id, 5, 9) - 0.5) * 0.04;
     bright[id] = Math.pow(p, 0.42);
   }

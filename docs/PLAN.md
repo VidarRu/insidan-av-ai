@@ -64,13 +64,15 @@ Sidan har nio scrollsteg som följer en och samma mening, den som besökaren sj�
 
 ### Tillägg 2026-11-15: tre scener om skevhet, efterträning och inställsamhet
 
-Vidar vill ha med inbyggd skevhet (bias) och inställsamhet (sycophancy). De tre scenerna läggs mellan steg 7 och steg 8, och alla tre bygger på solfjädern från steg 5. Vidar valde koncepten bland tre förslag per scen. Scenerna är inte byggda än.
+Vidar vill ha med inbyggd skevhet (bias) och inställsamhet (sycophancy). Alla tre bygger på solfjädern från steg 5. Vidar valde koncepten bland tre förslag per scen. Scenerna är byggda (2026-11-15).
+
+**Ändrad plats:** scenerna ligger efter slumpen och före hallucinationen, inte efter hallucinationen som först var tänkt. Då står solfjädern kvar i bild genom fem scener i rad, och kameran behöver inte åka tillbaka från strömmen. På sidan har de nummer 7, 8 och 9. Hallucinationen är nummer 10 och slutscenen nummer 11. I tabellen heter de 7a, 7b och 7c.
 
 | Steg | Vad besökaren ser och gör | Vad hen ska ta med sig | Räknas live? |
 | --- | --- | --- | --- |
 | 7a. Skev träningstext: två solfjädrar | Samma mening med ett utbytt yrke, till exempel "Sjuksköterskan sa att" mot "Ingenjören sa att". Två solfjädrar bredvid varandra visar hur sannolikheten för "hon" och "han" flyttar sig. Besökaren kan byta in ett eget yrke. | Modellen ger tillbaka mönstren i texten den tränades på, också de skeva. | Ja, med förberäknat exempel som reserv. |
 | 7b. Efterträning: betygen formar solfjädern | Solfjädern står kvar. Tummar upp och ner från människor som har betygsatt svar regnar in, och strålarna växer eller krymper. | Chattbotar tränas vidare på mänskliga betyg, och det ändrar vilka svar som blir sannolika. Vår modell är råvaran och har inte gått igenom det steget. | Nej. Förklarande animation, och det ska stå i rutan. |
-| 7c. Inställsamhet: den lutade solfjädern | Samma fråga i tre versioner: neutral, "jag tycker att det är en jättebra idé" och "jag tycker att det är en jättedålig idé". Solfjädern för svaret lutar åt samma håll som frågan. | Det du själv skriver i frågan flyttar svaret. Medhåll är inget bevis för att du har rätt. | Ja, med förberäknat exempel som reserv. |
+| 7c. Inställsamhet: den lutade solfjädern | Två solfjädrar: till vänster frågan utan åsikt, till höger samma fråga där den som frågar först säger "jättebra idé" eller "jättedålig idé". Besökaren byter åsikt med ett reglage. | Det du själv skriver i frågan flyttar svaret. Medhåll är inget bevis för att du har rätt. | Ja, med förberäknat exempel som reserv. |
 
 Krav på förenklingarna i de här scenerna:
 
