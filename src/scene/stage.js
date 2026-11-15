@@ -1,14 +1,18 @@
-// Scenen: ett enda partikelsystem med 64 000 partiklar som byter form när
-// besökaren scrollar. Dessutom linjer, etiketter och kamera.
+// Scenen: ett enda partikelsystem med 64 000 partiklar och en kamera som åker
+// inåt genom det när besökaren scrollar. Dessutom linjer och etiketter.
 import * as THREE from 'three';
 import {
   N, N_LAYERS, buildBrain, buildBrainLinks, buildDust, buildGalaxy, buildLayers, buildFan, buildStream,
-  FAN_PIVOT, layerY, LAYER_BOTTOM, LAYER_TOP,
+  FAN_PIVOT, FAN_Z, GALAXY_IN, GALAXY_FAR, FAR_CENTER, STREAM_Z0, STREAM_LEN, LAYER_HALF, LAYER_GAP, THREAD_Z0, threadZ, layerZ,
 } from './shapes.js';
 
 export const ACCENT = 0xffb24a;
 const RIBS = 1400;
 const FIL_COLORS = [0xffd166, 0x5fe3c0, 0xff7fb0]; // yoghurt, körfält, dator
+const FIL_SCALE = 1.0, TUBE_SEGMENTS = 156;
+const V3 = THREE.Vector3;
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+const smooth = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
 
 // Färglägen i shadern
 const MODE = { brain: 0, dust: 1, galaxy: 2, layers: 3, fan: 4, stream: 5 };
@@ -30,6 +34,8 @@ const VERT = /* glsl */ `
   uniform float uAccentFrom;
   uniform float uAccentTo;
   uniform float uDim;
+  uniform float uFog;
+  uniform float uFlow;
   varying vec3 vColor;
   varying float vAlpha;
 
@@ -40,21 +46,21 @@ const VERT = /* glsl */ `
     } else if (mode < 1.5) {     // stoft
       return mix(vec3(0.16, 0.24, 0.5), vec3(0.4, 0.5, 0.8), rnd.x) * (0.12 + 0.3 * rnd.y * rnd.y);
     } else if (mode < 2.5) {     // galaxen: färg efter plats
-      float a = 0.5 + 0.5 * sin(p.x * 1.7 + p.z * 1.1);
-      float b = 0.5 + 0.5 * sin(p.y * 2.1 - p.x * 0.7 + 1.3);
+      float a = 0.5 + 0.5 * sin(p.x * 0.9 + p.z * 0.6);
+      float b = 0.5 + 0.5 * sin(p.y * 1.1 - p.x * 0.4 + 1.3);
       vec3 c = mix(vec3(0.16, 0.32, 1.0), vec3(0.62, 0.3, 0.95), a);
       c = mix(c, vec3(0.1, 0.75, 0.8), b * 0.55);
       c = mix(c, vec3(1.0), step(0.965, rnd.z) * 0.8);
-      return c * (0.3 + 0.55 * rnd.y);
-    } else if (mode < 3.5) {     // lagren: från blått nederst till turkost överst
-      float h = clamp((p.y + 1.0) * 0.5, 0.0, 1.0);
-      return mix(vec3(0.14, 0.3, 0.95), vec3(0.15, 0.85, 0.8), h) * (0.22 + 0.4 * rnd.y);
+      return c * (0.5 + 0.8 * rnd.y);
+    } else if (mode < 3.5) {     // lagren: från blått i första lagret till turkost i sista
+      float h = clamp((${THREAD_Z0.toFixed(2)} - p.z) / ${(12 * LAYER_GAP).toFixed(2)}, 0.0, 1.0);
+      return mix(vec3(0.14, 0.3, 0.95), vec3(0.15, 0.85, 0.8), h) * (0.3 + 0.55 * rnd.y);
     } else if (mode < 4.5) {     // solfjädern: ljusstyrka = sannolikhet
       vec3 c = mix(vec3(0.13, 0.22, 0.6), vec3(1.0, 0.86, 0.6), smoothstep(0.02, 0.5, bright));
       return c * (0.05 + 2.2 * bright);
     }
     // strömmen
-    return mix(vec3(0.2, 0.3, 0.85), vec3(0.75, 0.4, 0.9), rnd.x) * (0.22 + 0.4 * rnd.y);
+    return mix(vec3(0.2, 0.35, 1.0), vec3(0.8, 0.4, 0.95), rnd.x) * (0.6 + 0.9 * rnd.y);
   }
 
   float sizeFor(float mode, float bright) {
@@ -64,11 +70,18 @@ const VERT = /* glsl */ `
     return 1.0;
   }
 
+  // Strömmen rinner mot kameran och börjar om längst in
+  vec3 place(float mode, vec3 p) {
+    if (mode > 4.5) p.z = ${STREAM_Z0.toFixed(2)} - mod(${STREAM_Z0.toFixed(2)} - p.z - uFlow, ${STREAM_LEN.toFixed(2)});
+    return p;
+  }
+
   void main() {
     float delay = aRnd.x * 0.4;
     float t = clamp((uT - delay) / 0.6, 0.0, 1.0);
     t = t * t * (3.0 - 2.0 * t);
-    vec3 p = mix(aFrom, aTo, t);
+    vec3 from = place(uModeFrom, aFrom), to = place(uModeTo, aTo);
+    vec3 p = mix(from, to, t);
     // På vägen mellan två former virvlar partiklarna ut i en båge
     float mid = sin(t * 3.14159265);
     vec3 swirl = vec3(sin(aRnd.y * 40.0 + uTime * 0.3), cos(aRnd.z * 37.0 + uTime * 0.25), sin(aRnd.w * 51.0 - uTime * 0.2));
@@ -78,22 +91,28 @@ const VERT = /* glsl */ `
     p += 0.006 * vec3(sin(uTime * 0.7 + aRnd.y * 60.0), cos(uTime * 0.6 + aRnd.z * 60.0), sin(uTime * 0.5 + aRnd.w * 60.0));
 
     float bright = mix(aBrightFrom, aBrightTo, t);
-    vec3 c = mix(palette(uModeFrom, aFrom, aRnd, aBrightFrom), palette(uModeTo, aTo, aRnd, aBrightTo), t);
+    vec3 c = mix(palette(uModeFrom, from, aRnd, aBrightFrom), palette(uModeTo, to, aRnd, aBrightTo), t);
     float size = mix(sizeFor(uModeFrom, aBrightFrom), sizeFor(uModeTo, aBrightTo), t);
     c *= uDim;
     float accent = aAccent * mix(uAccentFrom, uAccentTo, t);
     c = mix(c, vec3(1.0, 0.7, 0.29) * 1.6, accent);
-    size *= 1.0 + 4.5 * accent;
     // Markerade bitar (sökta ord och grannar) lyser vitt
     float mark = aMark * mix(uAccentFrom, uAccentTo, t); // bara i galaxen
     c = mix(c, vec3(1.0), mark);
-    size *= 1.0 + 2.2 * mark;
+    float hero = max(accent, mark);
 
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = min(uSize * size * uScale / -mv.z, 40.0 * uScale / 900.0);
+    float d = max(-mv.z, 0.02);
+    float px = uSize * size * uScale / d;
+    // Djup: punkter långt bort bleknar, punkter nära blir stora och mjuka som
+    // i en kamera med kort skärpedjup, och de allra närmaste tonas bort.
+    float soft = max(1.0, px / (0.011 * uScale));
+    float fog = exp(-max(d - 0.6, 0.0) * uFog);
+    vAlpha = smoothstep(0.05, 0.45, d) * mix(fog / pow(soft, 0.9), 1.0, hero);
+    px *= 1.0 + 4.5 * accent + 2.2 * mark;
+    gl_PointSize = min(px, 0.1 * uScale);
     vColor = c;
-    vAlpha = 1.0;
   }
 `;
 
@@ -107,18 +126,23 @@ const FRAG = /* glsl */ `
   }
 `;
 
-// Kamerans plats och blickpunkt för varje steg i berättelsen
+// En vy per scen i berättelsen. Kamerans plats räknas ut i Stage.view().
+// morph: när under övergången in till scenen som partiklarna byter form.
+// shift: bilden flyttas åt höger (rubriken står till vänster). lift: bilden lyfts ovanför undertexten.
 const VIEWS = [
-  { shape: 'brain', mode: MODE.brain, cam: [2.35, 0.35, 1.9], look: [0, 0, 0], spin: 0.12, accent: 0, shiftX: 0.55 },
-  { shape: 'dust', mode: MODE.dust, cam: [0, 0.2, 3.6], look: [0, 0, 0], spin: 0.03, accent: 0, shiftX: 0 },
-  { shape: 'dust', mode: MODE.dust, cam: [0, 0.1, 3.2], look: [0, 0, 0], spin: 0.03, accent: 0, shiftX: 0 },
-  { shape: 'galaxy', mode: MODE.galaxy, cam: [0, 0.5, 4.3], look: [0, 0, 0], spin: 0.035, accent: 1, shiftX: 0.5 },
-  { shape: 'layers', mode: MODE.layers, cam: [3.3, 1.5, 3.9], look: [0, 0.05, 0], spin: 0, accent: 0, shiftX: 0.5 },
-  { shape: 'fan', mode: MODE.fan, cam: [0, 0.0, 3.9], look: [0, 0.0, 0], spin: 0, accent: 0, shiftX: 0.5 },
-  { shape: 'fan', mode: MODE.fan, cam: [0, 0.0, 3.9], look: [0, 0.0, 0], spin: 0, accent: 0, shiftX: 0.5 },
-  { shape: 'stream', mode: MODE.stream, cam: [0, 0.15, 3.3], look: [0, 0, 0], spin: 0, accent: 0, shiftX: 0 },
-  { shape: 'galaxy', mode: MODE.galaxy, cam: [0, 0.9, 3.1], look: [0, 0, 0], spin: 0.03, accent: 1, shiftX: 0 },
+  { shape: 'brain', mode: MODE.brain, accent: 0, fog: 0, shift: 1, lift: 0 },
+  { shape: 'galaxy', mode: MODE.galaxy, accent: 1, fog: 0.1, shift: 0, lift: 0.03, morph: [0.42, 1] },
+  { shape: 'galaxy', mode: MODE.galaxy, accent: 1, fog: 0.1, shift: 0, lift: 0.06 },
+  { shape: 'galaxy', mode: MODE.galaxy, accent: 1, fog: 0.1, shift: 0, lift: 0.06 },
+  { shape: 'layers', mode: MODE.layers, accent: 0, fog: 0.09, shift: 0, lift: 0.06 },
+  { shape: 'fan', mode: MODE.fan, accent: 0, fog: 0, shift: 0, lift: 0.14 },
+  { shape: 'fan', mode: MODE.fan, accent: 0, fog: 0, shift: 0, lift: 0.14 },
+  { shape: 'stream', mode: MODE.stream, accent: 0, fog: 0.06, shift: 0, lift: 0 },
+  { shape: 'far', mode: MODE.galaxy, accent: 1, fog: 0, shift: 0, lift: 0 },
 ];
+const LAST = VIEWS.length - 1;
+// Kameran står snett bakom den bit den följer i rummet
+const TOKEN_OFFSET = new V3(0.3, 0.18, 1.25);
 
 export class Stage {
   constructor(canvas, labelRoot, { reduced = false } = {}) {
@@ -126,14 +150,19 @@ export class Stage {
     this.labelRoot = labelRoot;
     this.reduced = reduced;
     this.paused = reduced;
-    this.stage = 0;          // flyttal: 3.4 betyder 40 % av vägen från steg 3 till steg 4
+    // Var i resan vi är: scen k, andel t av övergången till scen k + 1, och hur
+    // långt in i scenen kameran har åkt (qa för scen k, qb för scen k + 1).
+    this.k = 0; this.t = 0; this.qa = 0; this.qb = 0;
+    this.stage = 0;          // k + t, för synlighet av linjer och etiketter
     this.pair = -1;
     this.time = 0;
-    this.spinAngle = 0;
     this.labels = new Map();
-    this.focus = null;       // { pos: Vector3 } när kameran tittar på ett sökt ord
+    this.focus = null;       // { pos: Vector3 } när kameran åker till ett sökt ord
     this.focusAmount = 0;
     this.pointer = new THREE.Vector2();
+    this.tokenPts = [];
+    this.pathU = 0;
+    this.filPts = null; this.filActive = 0; this.filL = 0;
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: 'high-performance' });
     this.renderer = renderer;
@@ -142,30 +171,31 @@ export class Stage {
     renderer.setClearColor(0x04050c, 1);
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(42, 1, 0.05, 60);
+    this.camera = new THREE.PerspectiveCamera(42, 1, 0.03, 80);
     this.group = new THREE.Group();
     this.scene.add(this.group);
 
     // Former
     const brain = buildBrain();
+    const dust = buildDust().pos;
     this.shapes = {
       brain: { pos: brain.pos, bright: brain.bright },
-      dust: { pos: buildDust().pos, bright: new Float32Array(N) },
-      galaxy: { pos: new Float32Array(buildDust().pos), bright: new Float32Array(N) }, // ersätts när galaxens data har laddats
+      // galaxy och far ersätts när galaxens data har laddats
+      galaxy: { pos: dust.map((v) => v * 1.6), bright: new Float32Array(N) },
+      far: { pos: dust.map((v, i) => v * 0.8 + FAR_CENTER[i % 3]), bright: new Float32Array(N) },
       layers: { pos: buildLayers().pos, bright: new Float32Array(N) },
       fan: { pos: new Float32Array(N * 3), bright: new Float32Array(N) },
       stream: { pos: buildStream().pos, bright: new Float32Array(N) },
     };
     // Innan några sannolikheter finns: en jämn solfjäder
-    const flat = new Float64Array(N).fill(1 / N);
-    buildFan(flat, this.shapes.fan);
+    buildFan(new Float64Array(N).fill(1 / N), this.shapes.fan);
     this.fanTarget = null;
 
     // Partiklarna
     const geo = new THREE.BufferGeometry();
     const rnd = new Float32Array(N * 4);
-    let s = 1234567;
-    for (let i = 0; i < rnd.length; i++) { s = (Math.imul(s, 1664525) + 1013904223) | 0; rnd[i] = (s >>> 0) / 4294967296; }
+    let seed = 1234567;
+    for (let i = 0; i < rnd.length; i++) { seed = (Math.imul(seed, 1664525) + 1013904223) | 0; rnd[i] = (seed >>> 0) / 4294967296; }
     this.attr = {
       from: new THREE.BufferAttribute(new Float32Array(N * 3), 3),
       to: new THREE.BufferAttribute(new Float32Array(N * 3), 3),
@@ -183,10 +213,11 @@ export class Stage {
     geo.setAttribute('aBrightTo', this.attr.brightTo);
     geo.setAttribute('aAccent', this.attr.accent);
     geo.setAttribute('aMark', this.attr.mark);
-    geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 20);
+    geo.boundingSphere = new THREE.Sphere(new V3(), 100);
     this.uniforms = {
       uT: { value: 0 }, uTime: { value: 0 }, uSize: { value: 0.02 }, uScale: { value: 1 },
       uModeFrom: { value: 0 }, uModeTo: { value: 0 }, uAccentFrom: { value: 0 }, uAccentTo: { value: 0 }, uDim: { value: 1 },
+      uFog: { value: 0 }, uFlow: { value: 0 },
     };
     this.points = new THREE.Points(geo, new THREE.ShaderMaterial({
       uniforms: this.uniforms, vertexShader: VERT, fragmentShader: FRAG,
@@ -208,19 +239,18 @@ export class Stage {
     this.neighborLines = this.makeSegments(0xffffff, 16);
     this.group.add(this.pathLine, this.neighborLines);
 
-    // Lagrens ramar och de tre vägarna för "fil"
+    // Lagrens ramar och de tre trådarna för "fil"
     this.layerFrames = this.buildLayerFrames();
     this.group.add(this.layerFrames);
     this.filGroup = new THREE.Group();
     this.group.add(this.filGroup);
-    this.filDots = [];
 
     // Solfjäderns ribbor
     this.fanRibs = this.makeSegments(0xffd9a0, RIBS, true);
     this.group.add(this.fanRibs);
 
-    this.camPos = new THREE.Vector3(...VIEWS[0].cam);
-    this.camLook = new THREE.Vector3(...VIEWS[0].look);
+    const v = this.view(0, 0);
+    this.camPos = v.pos.clone(); this.camLook = v.look.clone();
     this.resize();
     this.applyPair(0);
     window.addEventListener('resize', () => this.resize());
@@ -249,10 +279,10 @@ export class Stage {
   }
 
   buildLayerFrames() {
-    const h = 0.86, pts = [];
-    for (let l = 0; l < N_LAYERS; l++) {
-      const y = layerY(l);
-      const c = [[-h, y, -h], [h, y, -h], [h, y, h], [-h, y, h]];
+    const h = LAYER_HALF + 0.04, pts = [];
+    for (let l = 1; l <= N_LAYERS; l++) {
+      const z = layerZ(l);
+      const c = [[-h, -h, z], [h, -h, z], [h, h, z], [-h, h, z]];
       for (let k = 0; k < 4; k++) pts.push(...c[k], ...c[(k + 1) % 4]);
     }
     const g = new THREE.BufferGeometry();
@@ -264,7 +294,8 @@ export class Stage {
 
   // ---------- Data in ----------
   setGalaxy(int16) {
-    this.shapes.galaxy.pos = buildGalaxy(int16).pos;
+    this.shapes.galaxy.pos = buildGalaxy(int16, GALAXY_IN).pos;
+    this.shapes.far.pos = buildGalaxy(int16, GALAXY_FAR, FAR_CENTER).pos;
     this.pair = -1; // ladda upp på nytt
   }
 
@@ -274,11 +305,7 @@ export class Stage {
     const a = this.attr.accent.array; a.fill(0);
     for (const id of ids) a[id] = 1;
     this.attr.accent.needsUpdate = true;
-    const g = this.shapes.galaxy.pos, arr = this.pathLine.geometry.attributes.position.array;
-    const n = Math.min(ids.length, 64);
-    for (let i = 0; i < n; i++) { arr[i * 3] = g[ids[i] * 3]; arr[i * 3 + 1] = g[ids[i] * 3 + 1]; arr[i * 3 + 2] = g[ids[i] * 3 + 2]; }
-    this.pathLine.geometry.attributes.position.needsUpdate = true;
-    this.pathLine.geometry.setDrawRange(0, n);
+    this.tokenPts = ids.slice(0, 64).map((id) => this.galaxyPosition(id));
   }
 
   // Markera ett sökt ord och dess grannar i galaxen (ids[0] är ordet självt)
@@ -291,7 +318,7 @@ export class Stage {
       for (let i = 1; i < ids.length && n < 16; i++, n++) {
         arr.set([g[ids[0] * 3], g[ids[0] * 3 + 1], g[ids[0] * 3 + 2], g[ids[i] * 3], g[ids[i] * 3 + 1], g[ids[i] * 3 + 2]], n * 6);
       }
-      this.focus = { pos: new THREE.Vector3(g[ids[0] * 3], g[ids[0] * 3 + 1], g[ids[0] * 3 + 2]) };
+      this.focus = { pos: this.galaxyPosition(ids[0]) };
     } else this.focus = null;
     this.attr.mark.needsUpdate = true;
     this.neighborLines.geometry.attributes.position.needsUpdate = true;
@@ -300,7 +327,7 @@ export class Stage {
 
   galaxyPosition(id) {
     const g = this.shapes.galaxy.pos;
-    return new THREE.Vector3(g[id * 3], g[id * 3 + 1], g[id * 3 + 2]);
+    return new V3(g[id * 3], g[id * 3 + 1], g[id * 3 + 2]);
   }
 
   // Nya sannolikheter: solfjädern formas om
@@ -318,7 +345,7 @@ export class Stage {
 
   fanPosition(id) {
     const f = this.shapes.fan.pos;
-    return new THREE.Vector3(f[id * 3], f[id * 3 + 1], f[id * 3 + 2]);
+    return new V3(f[id * 3], f[id * 3 + 1], f[id * 3 + 2]);
   }
 
   updateRibs() {
@@ -336,48 +363,114 @@ export class Stage {
     this.fanRibs.geometry.setDrawRange(0, n * 2);
   }
 
-  // De tre vägarna för ordet "fil" genom lagren. triangles: 13 x 3 x 2
-  setFil(triangles, active = -1) {
-    this.filData = triangles;
-    while (this.filGroup.children.length) this.filGroup.remove(this.filGroup.children[0]);
-    this.filDots = [];
-    const scale = 1.35, steps = triangles.length;
-    const yOf = (l) => LAYER_BOTTOM - 0.16 + (l / (steps - 1)) * (LAYER_TOP - LAYER_BOTTOM + 0.32);
+  // De tre trådarna för ordet "fil" genom lagren. triangles: 13 x 3 x 2.
+  // Trådarna växer fram när kameran åker genom lagren.
+  setFil(triangles, active = 0) {
+    this.filActive = active;
+    for (const m of [...this.filGroup.children]) { this.filGroup.remove(m); m.geometry.dispose(); m.material.dispose(); }
+    this.filPts = [0, 1, 2].map((s) => triangles.map((tri, j) => new V3(tri[s][0] * FIL_SCALE, tri[s][1] * FIL_SCALE, threadZ(j))));
+    const mat = (color, base) => {
+      const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0, depthTest: false, blending: THREE.AdditiveBlending });
+      m.userData.base = base; return m;
+    };
+    this.filTubes = []; this.filHeads = [];
     for (let s = 0; s < 3; s++) {
-      const pts = triangles.map((tri, l) => new THREE.Vector3(tri[s][0] * scale, yOf(l), tri[s][1] * scale));
-      const curve = new THREE.CatmullRomCurve3(pts);
-      const dim = active >= 0 && active !== s;
-      const tube = new THREE.Mesh(new THREE.TubeGeometry(curve, 120, dim ? 0.006 : 0.011, 8),
-        new THREE.MeshBasicMaterial({ color: FIL_COLORS[s], transparent: true, opacity: 0, depthTest: false, blending: THREE.AdditiveBlending }));
-      tube.userData.base = dim ? 0.45 : 1;
-      this.filGroup.add(tube);
-      for (const p of pts) {
-        const dot = new THREE.Mesh(new THREE.SphereGeometry(dim ? 0.012 : 0.019, 12, 12),
-          new THREE.MeshBasicMaterial({ color: FIL_COLORS[s], transparent: true, opacity: 0, depthTest: false, blending: THREE.AdditiveBlending }));
-        dot.position.copy(p); dot.userData.base = dim ? 0.45 : 0.9;
-        this.filGroup.add(dot);
-      }
-      this.filDots.push(pts);
+      const dim = active !== s;
+      const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(this.filPts[s]), TUBE_SEGMENTS, dim ? 0.004 : 0.007, 8), mat(FIL_COLORS[s], dim ? 0.6 : 1));
+      const head = new THREE.Mesh(new THREE.SphereGeometry(dim ? 0.018 : 0.026, 16, 16), mat(FIL_COLORS[s], 1));
+      tube.frustumCulled = head.frustumCulled = false;
+      this.filGroup.add(tube, head);
+      this.filTubes.push(tube); this.filHeads.push(head);
     }
+    // Triangeln mellan de tre trådarnas spetsar
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
+    this.filTriangle = new THREE.LineLoop(g, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthTest: false, blending: THREE.AdditiveBlending }));
+    this.filTriangle.material.userData.base = 0.35;
+    this.filTriangle.frustumCulled = false;
+    this.filGroup.add(this.filTriangle);
+  }
+
+  // Tråd s vid lager L (flyttal, 0 = före första lagret, 12 = efter sista)
+  filPoint(s, L) {
+    const pts = this.filPts[s], n = pts.length - 1;
+    L = Math.max(0, Math.min(n, L));
+    const j = Math.min(n - 1, Math.floor(L));
+    return pts[j].clone().lerp(pts[j + 1], L - j);
+  }
+
+  // Punkten på din menings väg genom rummet. u = 2.5 är mitt emellan bit 2 och 3.
+  tokenPoint(u) {
+    const pts = this.tokenPts, n = pts.length;
+    if (!n) return new V3();
+    if (n === 1) return pts[0].clone();
+    u = Math.max(0, Math.min(n - 1, u));
+    const j = Math.min(n - 2, Math.floor(u));
+    return pts[j].clone().lerp(pts[j + 1], smooth(u - j));
   }
 
   // ---------- Etiketter (HTML-element som följer punkter i 3D) ----------
-  // group: vilken form etiketten hör till. getPos: funktion som ger platsen.
+  // group: vilken scen etiketten hör till. getPos: funktion som ger platsen.
+  // vis: funktion som ger 0..1, text: funktion som ger texten för varje bild.
   setLabels(group, items) {
     for (const [key, l] of this.labels) if (l.group === group) { l.el.remove(); this.labels.delete(key); }
     items.forEach((it, i) => {
       const el = document.createElement('div');
       el.className = 'label ' + (it.cls || '');
       el.setAttribute('aria-hidden', 'true');
-      el.innerHTML = it.html;
+      el.innerHTML = it.html || '';
       this.labelRoot.appendChild(el);
-      this.labels.set(group + ':' + i, { group, el, getPos: it.getPos, dx: it.dx || 0, dy: it.dy || 0 });
+      this.labels.set(group + ':' + i, { group, el, getPos: it.getPos, vis: it.vis, text: it.text, dx: it.dx || 0, dy: it.dy || 0 });
     });
   }
 
-  // ---------- Form, kamera, bild ----------
+  // ---------- Kameran ----------
+  // Kamerans plats och blickpunkt i scen i, när besökaren har scrollat andelen q genom scenen.
+  view(i, q) {
+    const time = this.time;
+    switch (i) {
+      case 0: { // utanför hjärnan, som sakta vrider sig
+        const a = 0.55 + 0.3 * Math.sin(time * 0.17), r = (this.narrow ? 5.2 : 3.7) - 0.5 * q;
+        return { pos: new V3(Math.sin(a) * r, 0.35, Math.cos(a) * r), look: new V3(0, 0, 0) };
+      }
+      case 1: { // inne i rummet, på väg rakt in
+        const yaw = 0.3 * Math.sin(time * 0.13);
+        const pos = new V3(0.15 * Math.sin(time * 0.09), 0.05, 1.3 - 1.1 * q);
+        return { pos, look: new V3(pos.x + Math.sin(yaw) * 3, 0.05 + 0.4 * Math.sin(time * 0.11), pos.z - 3) };
+      }
+      case 2: { // följer din mening från bit till bit
+        const n = this.tokenPts.length;
+        const p = this.tokenPoint(clamp01((q - 0.06) / 0.86) * (n - 1));
+        return { pos: p.clone().add(TOKEN_OFFSET), look: p };
+      }
+      case 3: { // backar från sista biten och ser mer av rummet
+        const p = this.tokenPoint(this.tokenPts.length - 1);
+        return { pos: p.clone().addScaledVector(TOKEN_OFFSET, 2.1 + 0.6 * q), look: p };
+      }
+      case 4: { // genom de tolv lagren, strax bakom trådarnas spetsar
+        const L = q * 12, z = THREAD_Z0 - L * LAYER_GAP;
+        if (!this.filPts) return { pos: new V3(0, 0.1, z + 1.9), look: new V3(0, 0, z - 1.2) };
+        // Mitt emellan de tre trådarna, lite ovanför, så att ingen tråd går rakt genom kameran
+        const mid = (l) => { const c = new V3(); for (let s = 0; s < 3; s++) c.add(this.filPoint(s, l)); return c.multiplyScalar(1 / 3); };
+        const b = mid(L - 1), c = mid(L + 0.8);
+        return { pos: new V3(b.x * 0.5, b.y * 0.5 + 0.14, z + (this.narrow ? 3.2 : 1.9)), look: new V3(c.x * 0.6, c.y * 0.6, z - 1.2) };
+      }
+      case 5: return { pos: new V3(0, 0, FAN_Z + (this.narrow ? 6.6 : 5.0) - 0.2 * q), look: new V3(0, 0, FAN_Z) };
+      case 6: return { pos: new V3(0, 0, FAN_Z + (this.narrow ? 6.4 : 4.8) - 0.1 * q), look: new V3(0, 0, FAN_Z) };
+      case 7: { // genom solfjädern och in i strömmen
+        const z = FAN_Z - 2.5 - 2 * q;
+        return { pos: new V3(0, 0, z), look: new V3(0.3 * Math.sin(time * 0.1), 0, z - 5) };
+      }
+      default: { // backar ut och ser hela rummet på håll
+        const c = new V3(...FAR_CENTER), a = 0.25 * Math.sin(time * 0.08), r = (this.narrow ? 7 : 4.6) + 1.2 * q;
+        return { pos: new V3(c.x + Math.sin(a) * r, 0.8, c.z + Math.cos(a) * r), look: c };
+      }
+    }
+  }
+
+  // ---------- Form och bild ----------
   uploadShape(name) {
-    const k = Math.max(0, Math.min(VIEWS.length - 2, this.pair));
+    const k = Math.max(0, Math.min(LAST - 1, this.pair));
     if (VIEWS[k].shape === name) { this.attr.from.array.set(this.shapes[name].pos); this.attr.from.needsUpdate = true; this.attr.brightFrom.array.set(this.shapes[name].bright); this.attr.brightFrom.needsUpdate = true; }
     if (VIEWS[k + 1].shape === name) { this.attr.to.array.set(this.shapes[name].pos); this.attr.to.needsUpdate = true; this.attr.brightTo.array.set(this.shapes[name].bright); this.attr.brightTo.needsUpdate = true; }
   }
@@ -402,26 +495,25 @@ export class Stage {
     this.narrow = w < 820;
   }
 
-  // Hur mycket en viss form syns just nu (0..1)
-  weight(shape) {
-    const k = Math.max(0, Math.min(VIEWS.length - 2, Math.floor(this.stage)));
-    const t = Math.max(0, Math.min(1, this.stage - k));
-    let w = 0;
-    if (VIEWS[k].shape === shape) w += 1 - t;
-    if (VIEWS[k + 1].shape === shape) w += t;
-    return w;
-  }
-
+  // Hur mycket scen nummer step syns just nu (0..1), och samma sak för ett spann av scener
   weightOfStep(step) { return Math.max(0, 1 - Math.abs(this.stage - step)); }
+  inScenes(a, b) { return clamp01(Math.min(this.stage - a + 1, b + 1 - this.stage) * 2 - 1); }
+  weight(shape) {
+    const k = Math.min(LAST - 1, Math.floor(this.stage)), t = clamp01(this.stage - k);
+    return (VIEWS[k].shape === shape ? 1 - t : 0) + (VIEWS[k + 1].shape === shape ? t : 0);
+  }
 
   frame(dt) {
     if (!this.paused) this.time += dt;
-    const stage = this.stage;
-    const k = Math.max(0, Math.min(VIEWS.length - 2, Math.floor(stage)));
-    const t = Math.max(0, Math.min(1, stage - k));
+    let { k, t, qa, qb } = this;
+    if (k >= LAST) { k = LAST - 1; t = 1; qb = qa; qa = 1; }
+    this.stage = k + t;
     if (k !== this.pair) this.applyPair(k);
-    this.uniforms.uT.value = t;
+    const A = VIEWS[k], B = VIEWS[k + 1];
+    const m = B.morph || [0, 1];
+    this.uniforms.uT.value = clamp01((t - m[0]) / (m[1] - m[0]));
     this.uniforms.uTime.value = this.time;
+    this.uniforms.uFlow.value = (this.time * 0.55) % STREAM_LEN;
 
     // Solfjädern formas om mjukt när sannolikheterna ändras
     if (this.fanTarget) {
@@ -434,68 +526,84 @@ export class Stage {
       this.uploadShape('fan'); this.updateRibs();
     }
 
-    // Kamera
-    const a = VIEWS[k], b = VIEWS[k + 1];
-    const e = t * t * (3 - 2 * t);
-    const lerp = (x, y) => x + (y - x) * e;
-    const pos = new THREE.Vector3(lerp(a.cam[0], b.cam[0]), lerp(a.cam[1], b.cam[1]), lerp(a.cam[2], b.cam[2]));
-    const look = new THREE.Vector3(lerp(a.look[0], b.look[0]), lerp(a.look[1], b.look[1]), lerp(a.look[2], b.look[2]));
-    const spin = lerp(a.spin, b.spin);
-    // På smala skärmar ligger texten under bilden: backa kameran lite
-    if (this.narrow) pos.multiplyScalar(1.5);
-    if (!this.paused) this.spinAngle += spin * dt * (this.focus ? 0.15 : 1);
-    this.group.rotation.y = this.spinAngle * Math.min(1, Math.abs(spin) * 60 + (this.weight('galaxy') + this.weight('brain') + this.weight('dust') > 0 ? 1 : 0));
-    // Lager, solfjäder och ström ska alltid ses rakt framifrån
-    const straight = this.weight('layers') + this.weight('fan') + this.weight('stream');
-    this.group.rotation.y = this.spinAngle * (1 - Math.min(1, straight * 1.6));
-    this.group.updateMatrixWorld();
+    // Kamera: scenens egen åkning, och en mjuk övergång mellan två scener
+    const e = smooth(t), lerp = (x, y) => x + (y - x) * e;
+    const va = this.view(k, qa), vb = this.view(k + 1, qb);
+    const pos = va.pos.lerp(vb.pos, e), look = va.look.lerp(vb.look, e);
+    this.uniforms.uFog.value = lerp(A.fog, B.fog);
 
-    // Sökt ord: kameran går närmare
+    // Sökt ord: kameran åker dit
     const wantFocus = this.focus && this.weightOfStep(3) > 0.6 ? 1 : 0;
     this.focusAmount += (wantFocus - this.focusAmount) * Math.min(1, dt * (this.reduced ? 100 : 2.5));
     if (this.focusAmount > 0.001 && this.focus) {
-      const wp = this.focus.pos.clone().applyMatrix4(this.group.matrixWorld);
-      // Samma riktning som förut, men närmare och med ordet i mitten
-      const fpos = wp.clone().add(pos.clone().sub(look).normalize().multiplyScalar(2.3));
-      pos.lerp(fpos, this.focusAmount); look.lerp(wp, this.focusAmount);
+      pos.lerp(this.focus.pos.clone().addScaledVector(TOKEN_OFFSET, 0.8), this.focusAmount);
+      look.lerp(this.focus.pos, this.focusAmount);
     }
-    if (!this.paused) { pos.x += this.pointer.x * 0.08; pos.y += -this.pointer.y * 0.05; }
-    const smooth = this.reduced ? 1 : Math.min(1, dt * 6);
-    this.camPos.lerp(pos, smooth); this.camLook.lerp(look, smooth);
+    if (!this.paused) { pos.x += this.pointer.x * 0.06; pos.y += -this.pointer.y * 0.04; }
+    const follow = this.reduced ? 1 : Math.min(1, dt * 6);
+    this.camPos.lerp(pos, follow); this.camLook.lerp(look, follow);
     this.camera.position.copy(this.camPos);
     this.camera.lookAt(this.camLook);
-    // Flytta bilden åt sidan, så att den hamnar bredvid textrutan
-    const shift = this.narrow ? 0 : lerp(a.shiftX, b.shiftX) * (k % 2 === 0 ? 1 : 1);
-    const side = this.sideFor ? this.sideFor(stage) : 1;
-    // På smala skärmar ligger texten under bilden, utom i första steget där den ligger över
-    const up = this.narrow ? this.height * (0.2 - 0.42 * this.weightOfStep(0)) : 0;
-    this.camera.setViewOffset(this.width, this.height, -shift * side * this.width * 0.22, up, this.width, this.height);
+    // Bilden flyttas åt sidan när rubriken står till vänster, och uppåt när det står text under
+    const shift = this.narrow ? 0 : lerp(A.shift, B.shift) * 0.12;
+    const lift = this.narrow ? lerp(k === 0 ? -0.27 : 0.16, 0.16) : lerp(A.lift, B.lift);
+    this.camera.setViewOffset(this.width, this.height, -shift * this.width, lift * this.height, this.width, this.height);
     this.camera.updateMatrixWorld();
 
-    // Synlighet för linjer och annat som hör till en viss form
+    // Synlighet för linjer och annat som hör till en viss scen
     const brainW = this.weight('brain');
     this.brainLinks.material.opacity = 0.22 * Math.max(0, brainW * 2 - 1);
     this.brainLinks.visible = brainW > 0.5;
-    const galW = Math.max(0, this.weightOfStep(3) * 2 - 1);
-    this.pathLine.material.opacity = 0.75 * galW; this.pathLine.visible = galW > 0;
-    this.neighborLines.material.opacity = 0.55 * galW; this.neighborLines.visible = galW > 0;
+
+    // Din menings väg ritas fram bit för bit i scen 2 och ligger kvar i scen 3
+    const galW = this.inScenes(2, 3), n = this.tokenPts.length;
+    this.pathU = this.stage >= 2 ? (n - 1) * (k === 2 && t === 0 ? clamp01((qa - 0.06) / 0.86) : 1) : 0;
+    this.pathLine.visible = galW > 0 && n > 1;
+    if (this.pathLine.visible) {
+      const arr = this.pathLine.geometry.attributes.position.array, j = Math.min(n - 2, Math.floor(this.pathU));
+      for (let i = 0; i <= j; i++) this.tokenPts[i].toArray(arr, i * 3);
+      this.tokenPoint(this.pathU).toArray(arr, (j + 1) * 3);
+      this.pathLine.geometry.attributes.position.needsUpdate = true;
+      this.pathLine.geometry.setDrawRange(0, j + 2);
+      this.pathLine.material.opacity = 0.75 * galW;
+    }
+    const searchW = Math.max(0, this.weightOfStep(3) * 2 - 1);
+    this.neighborLines.material.opacity = 0.55 * searchW; this.neighborLines.visible = searchW > 0;
+
+    // Lagren och trådarna för "fil"
     const layW = Math.max(0, this.weight('layers') * 2 - 1);
-    this.layerFrames.material.opacity = 0.3 * layW; this.layerFrames.visible = layW > 0;
-    this.filGroup.visible = layW > 0;
-    for (const m of this.filGroup.children) m.material.opacity = layW * m.userData.base;
+    this.layerFrames.material.opacity = 0.32 * layW; this.layerFrames.visible = layW > 0;
+    this.filGroup.visible = layW > 0 && !!this.filPts;
+    this.filL = k === 4 ? qa * 12 : k > 4 ? 12 : 0;
+    if (this.filGroup.visible) {
+      const tri = this.filTriangle.geometry.attributes.position;
+      for (let s = 0; s < 3; s++) {
+        const head = this.filPoint(s, this.filL);
+        this.filHeads[s].position.copy(head); head.toArray(tri.array, s * 3);
+        // Bara den senaste biten av tråden ritas, som svansen på en komet
+        const seg = (l) => Math.floor((Math.max(0, l) / 12) * TUBE_SEGMENTS);
+        this.filTubes[s].geometry.setDrawRange(seg(this.filL - 1.35) * 48, (seg(this.filL) - seg(this.filL - 1.35)) * 48);
+      }
+      tri.needsUpdate = true;
+      for (const o of this.filGroup.children) o.material.opacity = layW * o.material.userData.base;
+    }
+
     const fanW = Math.max(0, this.weight('fan') * 2 - 1);
     this.fanRibs.material.opacity = 0.6 * fanW; this.fanRibs.visible = fanW > 0;
-    this.uniforms.uDim.value = 1 - 0.45 * this.weightOfStep(7) - 0.25 * Math.max(0, this.stage - 7);
+    // Bakom texten i de två sista scenerna lyser partiklarna svagare
+    this.uniforms.uDim.value = 1 - 0.3 * clamp01(this.stage - 7.2);
 
     // Etiketter
-    const v = new THREE.Vector3();
-    const groupWeight = { galaxy: galW, fan: Math.max(0, this.weightOfStep(5) * 2 - 1) + Math.max(0, this.weightOfStep(6) * 2 - 1), fil: layW, search: galW };
+    const v = new V3();
+    const groupWeight = { galaxy: galW, search: searchW, fil: Math.max(0, this.weightOfStep(4) * 2 - 1), fan: this.inScenes(5, 6) };
     const placed = [];
     for (const l of this.labels.values()) {
-      const w = Math.min(1, groupWeight[l.group] ?? 0);
+      const w = Math.min(1, groupWeight[l.group] ?? 0) * (l.vis ? l.vis() : 1);
       if (w <= 0.01) { l.el.style.opacity = 0; l.el.style.visibility = 'hidden'; continue; }
-      v.copy(l.getPos()).applyMatrix4(this.group.matrixWorld).project(this.camera);
-      if (v.z > 1) { l.el.style.visibility = 'hidden'; continue; }
+      v.copy(l.getPos()).applyMatrix4(this.camera.matrixWorldInverse);
+      if (v.z > -0.08) { l.el.style.visibility = 'hidden'; continue; } // bakom kameran
+      v.applyMatrix4(this.camera.projectionMatrix);
+      if (l.text) { const s = l.text(); if (s !== l.last) { l.last = s; l.el.innerHTML = s; l.w = 0; } }
       const x = (v.x * 0.5 + 0.5) * this.width + l.dx; let y = (-v.y * 0.5 + 0.5) * this.height + l.dy;
       // Etiketter som skulle hamna på varandra flyttas nedåt
       const lw = l.w || (l.w = l.el.offsetWidth + 8);

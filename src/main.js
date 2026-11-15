@@ -53,38 +53,86 @@ function float16ToFloat32(u16) {
   return out;
 }
 
-// ---------- Scroll: vilket steg vi är på ----------
-const sections = [...document.querySelectorAll('.step')];
+// ---------- Scroll: var i resan kameran är ----------
+// Varje scen är en sträcka att scrolla. Den första delen av sträckan (data-in,
+// räknat i skärmhöjder) är övergången från scenen före. Resten är scenens egen
+// åkning, där q går från 0 till 1.
+const scenes = [...document.querySelectorAll('.scene')];
 const navLinks = [...document.querySelectorAll('.steps a')];
-let targetStage = 0, currentStep = -1;
-function measure() {
-  const mid = window.scrollY + window.innerHeight / 2;
-  const centers = sections.map((s) => s.offsetTop + s.offsetHeight / 2);
-  let k = 0;
-  while (k < centers.length - 2 && mid > centers[k + 1]) k++;
-  const raw = Math.max(0, Math.min(1, (mid - centers[k]) / (centers[k + 1] - centers[k])));
-  const t = Math.max(0, Math.min(1, (raw - 0.3) / 0.4));
-  targetStage = k + t * t * (3 - 2 * t);
-  const step = Math.round(targetStage);
-  if (step !== currentStep) {
-    currentStep = step;
-    navLinks.forEach((a, i) => { if (i === step) a.setAttribute('aria-current', 'step'); else a.removeAttribute('aria-current'); });
-  }
+const sceneLines = scenes.map((s) => [...s.querySelectorAll('.line')]);
+const clamp01 = (x) => Math.max(0, Math.min(1, x));
+let currentStep = -1, currentLine = -1, scrollPos = window.scrollY;
+
+function sceneRange(i) {
+  const s = scenes[i], top = s.offsetTop, len = s.offsetHeight;
+  const into = i === 0 ? 0 : parseFloat(s.dataset.in || '1') * window.innerHeight;
+  // Den sista scenen går inte att scrolla förbi: en skärmhöjd av den blir aldrig åkning
+  const hold = len - into - (i === scenes.length - 1 ? window.innerHeight : 0);
+  return { top, into, hold: Math.max(1, hold) };
 }
-window.addEventListener('scroll', measure, { passive: true });
-window.addEventListener('resize', measure);
-// Bilden flyttas åt motsatt håll mot textrutan
-const sides = sections.map((s) => ({ left: 1, right: -1, center: 0 }[s.dataset.side]));
-stage.sideFor = (st) => {
-  const k = Math.max(0, Math.min(sides.length - 2, Math.floor(st))), t = st - k;
-  return sides[k] + (sides[k + 1] - sides[k]) * Math.max(0, Math.min(1, t));
-};
+
+function locate(y) {
+  let i = 0;
+  while (i < scenes.length - 1 && y >= scenes[i + 1].offsetTop) i++;
+  const r = sceneRange(i), local = y - r.top;
+  if (local < r.into) return { k: i - 1, t: local / r.into, qa: 1, qb: 0 };
+  return { k: i, t: 0, qa: clamp01((local - r.into) / r.hold), qb: 0 };
+}
+
+// Scrolla till en scen, förbi övergången in till den
+function goTo(i, smooth = true) {
+  const r = sceneRange(i);
+  window.scrollTo({ top: i === 0 ? 0 : r.top + r.into + 2, behavior: smooth && !stage.reduced ? 'smooth' : 'instant' });
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href^="#steg-"]');
+  if (!a) return;
+  e.preventDefault();
+  const i = Number(a.getAttribute('href').slice(6));
+  goTo(i);
+  // Tangentbord och skärmläsare: flytta också fokus till scenens rubrik
+  const h = scenes[i].querySelector('h1, h2');
+  if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+});
+// Den som tabbar till ett reglage i en scen som inte syns åker dit
+scenes.forEach((s, i) => s.addEventListener('focusin', () => { if (i !== currentStep) goTo(i, false); }));
+
+function updateProgress(dt) {
+  if (stage.reduced) scrollPos = window.scrollY;
+  else scrollPos += (window.scrollY - scrollPos) * Math.min(1, dt * 7);
+  const at = locate(scrollPos);
+  if (stage.reduced) {
+    // Minskad rörelse: inga åkningar. Bilden byter mellan fasta lägen.
+    if (at.t > 0) { if (at.t >= 0.5) { at.k++; at.qa = 0; } at.t = 0; }
+    at.qa = Math.round(at.qa * 3) / 3;
+  }
+  Object.assign(stage, at);
+  const step = at.t >= 0.5 ? at.k + 1 : at.k;
+  const q = at.t > 0 ? (step === at.k ? 1 : 0) : at.qa;
+  const lines = sceneLines[step];
+  const line = lines.length ? Math.min(lines.length - 1, Math.floor(q * lines.length)) : -1;
+  if (step !== currentStep) {
+    currentStep = step; currentLine = -1;
+    scenes.forEach((s, i) => s.classList.toggle('on', i === step));
+    navLinks.forEach((a, i) => { if (i === step) a.setAttribute('aria-current', 'step'); else a.removeAttribute('aria-current'); });
+    $('#yours').hidden = step === 0 || step === 8;
+    if (state.data) onStep();
+  }
+  if (line !== currentLine) {
+    currentLine = line;
+    lines.forEach((l, i) => l.classList.toggle('on', i === line));
+  }
+  // Mitt i en övergång är bilden ren: texten tonas bort och kommer tillbaka när kameran är framme
+  document.body.classList.toggle('travel', at.t > 0.12 && at.t < 0.62);
+  if (step === 4) updateFilReadout();
+  // I slutscenen visas först bilden med en rad text, sedan frågorna
+  scenes[8].classList.toggle('late', step === 8 && (q > 0.45 || stage.reduced));
+}
 
 let last = performance.now();
 function loop(now) {
   const dt = Math.min(0.1, (now - last) / 1000); last = now;
-  if (stage.reduced) stage.stage = Math.round(targetStage);
-  else stage.stage += (targetStage - stage.stage) * Math.min(1, dt * 5);
+  updateProgress(dt);
   stage.frame(dt);
   requestAnimationFrame(loop);
 }
@@ -133,13 +181,15 @@ async function modelIsCached() {
 // ---------- Steg 1: meningen ----------
 const sentenceInput = $('#sentence');
 function renderPresets() {
-  const box = $('#presets');
-  box.replaceChildren(...state.data.examples.presets.map((p, i) => {
-    const b = document.createElement('button');
-    b.type = 'button'; b.textContent = p.text; b.setAttribute('aria-pressed', String(state.preset === i));
-    b.addEventListener('click', () => setSentence(p.text));
-    return b;
-  }));
+  // De färdiga meningarna går att välja både i inledningen och vid solfjädern
+  for (const box of [$('#presets'), $('#presets-next')]) {
+    box.replaceChildren(...state.data.examples.presets.map((p, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = p.text; b.setAttribute('aria-pressed', String(state.preset === i));
+      b.addEventListener('click', () => setSentence(p.text));
+      return b;
+    }));
+  }
 }
 
 async function setSentence(text) {
@@ -155,13 +205,20 @@ async function setSentence(text) {
     state.ids = r.ids; state.pieces = r.pieces;
   } else if (preset) { state.ids = preset.ids; state.pieces = preset.pieces; }
   stage.setSentence(state.ids);
+  // Etiketterna tänds en i taget när kameran når fram till biten
   stage.setLabels('galaxy', state.ids.slice(0, 24).map((id, i) => ({
     html: esc(pieceText(state.pieces[i])), cls: 'accent', getPos: () => stage.galaxyPosition(id),
+    vis: () => clamp01((stage.pathU - i + 0.4) * 4),
   })));
   $('#next-context').textContent = text;
+  $('#yours-text').textContent = text;
+  // Vid solfjädern räcker den markerade knappen när meningen är en av de färdiga
+  $('#next-context').parentElement.classList.toggle('sr-only', !!preset);
   // Språkbytet finns bara för de färdiga meningarna, där det finns en översättning
   const langSet = document.querySelector('input[name="lang"]').closest('fieldset');
   langSet.disabled = !preset;
+  // Sökningen hörde till den förra meningens plats i rummet
+  stage.setMarked(null); stage.setLabels('search', []);
   if (!preset && state.lang === 'en') { state.lang = 'sv'; document.querySelector('input[name="lang"][value="sv"]').checked = true; }
   renderTokens();
   $('#runs').replaceChildren();
@@ -211,8 +268,9 @@ function wordIndex(word) {
 }
 async function search(word) {
   word = word.trim();
-  const box = $('#neighbors');
+  const box = $('#neighbors'), msg = $('#search-msg');
   if (!word) return;
+  msg.hidden = true;
   $('#search').value = word;
   const { vocab, words, wordRow, neighbors, neighborsSim } = state.data;
   const id = wordIndex(word);
@@ -223,7 +281,9 @@ async function search(word) {
       const r = await model.tokenize(word);
       if (r.pieces.length > 1) extra = ` Modellen klyver det i ${r.pieces.length} bitar: ${r.pieces.map((p) => `<em>${esc(pieceText(p))}</em>`).join(' ')}.`;
     }
-    box.innerHTML = `<p><strong>${esc(word)}</strong> finns inte som en egen bit i modellens ordförråd.${extra} Galaxen visar bara bitar. Prova ett vanligare ord.</p>`;
+    msg.innerHTML = `<strong>${esc(word)}</strong> finns inte som en egen bit i modellens ordförråd.${extra} Rummet visar bara bitar. Prova ett vanligare ord.`;
+    msg.hidden = false;
+    box.innerHTML = '<p>Sök ett ord, så visas dess närmaste grannar här.</p>';
     stage.setMarked(null); stage.setLabels('search', []);
     return;
   }
@@ -234,7 +294,7 @@ async function search(word) {
     '</ol><p class="note">Talet är likheten mellan ordens vektorer. 1 betyder identiska.</p>';
   stage.setMarked(ids);
   stage.setLabels('search', ids.map((nid, k) => ({
-    html: esc(pieceText(vocab[nid])), cls: k === 0 ? 'focus' : '', getPos: () => stage.galaxyPosition(nid),
+    html: esc(pieceText(vocab[nid])) + (k ? `<small>${fmtNum(sims[k - 1])}</small>` : ''), cls: k === 0 ? 'focus' : '', getPos: () => stage.galaxyPosition(nid),
   })));
 }
 $('#search-form').addEventListener('submit', (e) => { e.preventDefault(); search($('#search').value); });
@@ -270,10 +330,23 @@ function renderFil() {
   $('#fil-table').innerHTML = pairs.map(([a, b], k) =>
     `<tr><th scope="row"><span class="pairdot" style="--c:${css[a]}"></span><span class="pairdot" style="--c:${css[b]}"></span> ${FIL_NAMES[a]} och ${FIL_NAMES[b]}</th><td>${fmtNum(fil.cosine[0][k])}</td><td>${fmtNum(lastRow[k])}</td></tr>`).join('');
   stage.setFil(fil.triangles, state.filActive);
+  // I bilden: ordet vid varje tråds spets, och likheten mellan två trådar mitt emellan dem.
+  // Likheten är uppmätt efter varje lager och visas för det lager kameran senast passerade.
+  const row = () => fil.cosine[Math.min(fil.cosine.length - 1, Math.floor(stage.filL + 0.02))];
+  const apart = () => clamp01(stage.filL * 1.5 - 0.6);
   stage.setLabels('fil', [
-    ...fil.sentences.map((sent, i) => ({ html: `<span style="color:${css[i]}">fil</span> <small>${FIL_NAMES[i]}</small>`, cls: 'fil', getPos: () => stage.filDots[i][stage.filDots[i].length - 1], dy: -14 })),
-    { html: 'samma startpunkt', getPos: () => stage.filDots[0][0], dy: 16 },
+    ...fil.sentences.map((sent, i) => ({ html: `<span style="color:${css[i]}">fil</span> <small>${FIL_NAMES[i]}</small>`, cls: 'fil', getPos: () => stage.filPoint(i, stage.filL), dy: -16, vis: apart })),
+    ...pairs.map(([a, b], k) => ({ cls: 'sim', text: () => fmtNum(row()[k]), vis: apart,
+      getPos: () => stage.filPoint(a, stage.filL).lerp(stage.filPoint(b, stage.filL), 0.5) })),
+    { html: '<span>fil</span> <small>samma tal i alla tre meningarna</small>', cls: 'fil', getPos: () => stage.filPoint(0, 0), dy: -16, vis: () => 1 - clamp01(stage.filL * 3) },
   ]);
+}
+
+let filShown = '';
+function updateFilReadout() {
+  const l = Math.min(12, Math.floor(stage.filL + 0.02));
+  const text = l === 0 ? 'Före första lagret' : `Efter lager ${l} av 12`;
+  if (text !== filShown) { filShown = text; $('#fil-readout').textContent = text; }
 }
 
 // ---------- Steg 5 och 6: sannolikheter och solfjäder ----------
@@ -352,7 +425,7 @@ function addRun(temperature, live) {
   li.querySelector('.start').textContent = state.text;
   const list = $('#runs');
   list.prepend(li);
-  while (list.children.length > 4) list.lastChild.remove();
+  while (list.children.length > 2) list.lastChild.remove();
   return li.querySelector('.cont');
 }
 
@@ -422,14 +495,12 @@ async function runHallu() {
 }
 $('#hallu-form').addEventListener('submit', (e) => { e.preventDefault(); runHallu(); });
 
-// När ett steg kommer in i bild första gången
+// När en scen kommer in i bild
 let halluShown = false;
 function onStep() {
   updateFan();
-  if (currentStep === 7 && !halluShown && state.data) { halluShown = true; runHallu(); }
+  if (currentStep === 7 && !halluShown) { halluShown = true; runHallu(); }
 }
-let lastStepSeen = -1;
-setInterval(() => { if (currentStep !== lastStepSeen) { lastStepSeen = currentStep; if (state.data) onStep(); } }, 150);
 
 // ---------- Start ----------
 async function loadData() {
@@ -454,13 +525,16 @@ async function loadData() {
 }
 
 async function init() {
-  measure();
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   requestAnimationFrame(loop);
   state.data = await loadData();
   stage.setGalaxy(state.data.galaxy);
   renderFil();
   await setSentence(state.text);
   halluStart($('#hallu-input').value);
+  onStep();
+  const m = /^#steg-(\d)$/.exec(location.hash);
+  if (m) goTo(Number(m[1]), false);
   window.__ready = true;
 
   // Tokeniseraren är liten och laddas alltid. Då klyvs också egen text direkt.

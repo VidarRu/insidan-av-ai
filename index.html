@@ -9,12 +9,14 @@
   <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>
-  <a class="skip" href="#steg-1">Hoppa till första steget</a>
+  <a class="skip" href="#steg-1">Hoppa förbi inledningen</a>
 
   <canvas id="scene" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
   <div id="labels" aria-hidden="true"></div>
 
   <header class="topbar">
+    <p id="yours" class="yours" hidden>Din mening: <q id="yours-text"></q> <a href="#steg-0">Byt</a></p>
     <p id="model-status" class="status" role="status" aria-live="polite">
       <span class="dot" aria-hidden="true"></span><span id="model-status-text">Visar förberäknade exempel</span>
     </p>
@@ -22,232 +24,322 @@
     <button id="pause" class="ghost" aria-pressed="false">Pausa rörelse</button>
   </header>
 
-  <nav class="steps" aria-label="Stegen i berättelsen">
+  <nav class="steps" aria-label="Scenerna i berättelsen">
     <ol>
       <li><a href="#steg-0"><span>Hjärnmyten</span></a></li>
-      <li><a href="#steg-1"><span>Din mening</span></a></li>
+      <li><a href="#steg-1"><span>Inuti</span></a></li>
       <li><a href="#steg-2"><span>Bitar</span></a></li>
       <li><a href="#steg-3"><span>Betydelserummet</span></a></li>
       <li><a href="#steg-4"><span>Sammanhanget</span></a></li>
-      <li><a href="#steg-5"><span>Nästa ord</span></a></li>
+      <li><a href="#steg-5"><span>Nästa bit</span></a></li>
       <li><a href="#steg-6"><span>Slumpen</span></a></li>
       <li><a href="#steg-7"><span>Hallucinationen</span></a></li>
       <li><a href="#steg-8"><span>För dig</span></a></li>
     </ol>
   </nav>
 
+  <!-- Varje scen är en sträcka att scrolla. Inget innehåll rör sig: texten står
+       still i bild och kameran åker inåt. -->
   <main>
     <!-- 0 -->
-    <section class="step hero" id="steg-0" data-side="left" aria-labelledby="h0">
-      <div class="card bare">
-        <p class="kicker">AI-Folkbildaren visar</p>
-        <h1 id="h0">Inuti språk&shy;modellen</h1>
-        <p class="lead">Så här brukar AI se ut på bild: en glödande hjärna. Bilden är vacker. Den är också missvisande.</p>
-        <p class="lead">Scrolla, så plockar vi isär den och tittar på vad som finns där i stället.</p>
-        <p class="scrollhint" aria-hidden="true"><span></span>Scrolla</p>
-        <p class="sr-only">Bildbeskrivning: en hjärna i tre dimensioner, uppbyggd av 64 000 blå ljuspunkter med tunna linjer emellan. Den roterar långsamt. När du scrollar flyger punkterna isär.</p>
-        <details>
-          <summary>Så här är det egentligen</summary>
-          <p>En språkmodell är ett datorprogram som räknar med tal. Tekniken kallas neuronnät, och namnet kommer från en mycket förenklad idé om nervceller. Någon hjärna är det inte.</p>
-          <p>Ljuspunkterna här är inte påhittade. Varje punkt är en av de 64 000 textbitar som modellen på den här sidan räknar med. Du möter dem igen i varje steg.</p>
-        </details>
+    <section class="scene" id="steg-0" style="--len:1.3" aria-labelledby="h0">
+      <div class="hud">
+        <div class="intro">
+          <p class="kicker">AI-Folkbildaren visar</p>
+          <h1 id="h0">Inuti språk&shy;modellen</h1>
+          <p class="lead">Så här brukar AI se ut på bild: en glödande hjärna. Bilden är vacker, och missvisande. Skriv början på en mening, så följer vi den in och ser vad som finns där i stället.</p>
+          <form id="sentence-form" autocomplete="off">
+            <label for="sentence">Början på en mening</label>
+            <div class="inputrow">
+              <input id="sentence" type="text" maxlength="120" value="Biblioteket i Västervik ligger" spellcheck="false">
+              <button type="submit">Använd</button>
+            </div>
+          </form>
+          <div class="chips" id="presets" role="group" aria-label="Färdiga meningar"></div>
+          <p class="note" id="sentence-note">Din text lämnar aldrig din dator. Modellen räknar i din webbläsare.</p>
+          <p class="scrollhint" aria-hidden="true"><span></span>Scrolla för att åka in</p>
+          <p class="sr-only">Bildbeskrivning: en hjärna i tre dimensioner, uppbyggd av 64 000 blå ljuspunkter med tunna linjer emellan. Den vrider sig långsamt. När du scrollar åker kameran rakt in i den.</p>
+          <details class="more">
+            <summary>Så här är det egentligen</summary>
+            <div class="panel">
+              <p>En språkmodell är ett datorprogram som räknar med tal. Tekniken kallas neuronnät, och namnet kommer från en mycket förenklad idé om nervceller. Någon hjärna är det inte.</p>
+              <p>Ljuspunkterna är inte påhittade. Varje punkt är en av de 64 000 textbitar som modellen på den här sidan räknar med. Du möter dem igen i varje scen.</p>
+            </div>
+          </details>
+        </div>
       </div>
     </section>
 
     <!-- 1 -->
-    <section class="step" id="steg-1" data-side="center" aria-labelledby="h1">
-      <div class="card">
-        <p class="num">Steg 1 av 8</p>
-        <h2 id="h1">Allt börjar med text</h2>
-        <p>En språkmodell gör en enda sak: den fortsätter en text. Skriv början på en mening, eller välj en färdig. Din mening följer med genom hela sidan.</p>
-        <form id="sentence-form" autocomplete="off">
-          <label for="sentence">Början på en mening</label>
-          <div class="inputrow">
-            <input id="sentence" type="text" maxlength="120" value="Biblioteket i Västervik ligger" spellcheck="false">
-            <button type="submit">Använd</button>
+    <section class="scene" id="steg-1" style="--len:3.9" data-in="1.7" aria-labelledby="h1">
+      <div class="hud">
+        <div class="stack">
+          <div class="sub">
+            <h2 id="h1"><span>1</span> Inuti</h2>
+            <p class="line">Här inne finns ingen hjärna.</p>
+            <p class="line">Här finns 64 000 ljuspunkter. Varje punkt är en bit text som modellen räknar med.</p>
+            <p class="line">Några av dem lyser orange. De är bitarna i din mening.</p>
           </div>
-        </form>
-        <div class="chips" id="presets" role="group" aria-label="Färdiga meningar"></div>
-        <p class="note" id="sentence-note">Din text lämnar aldrig din dator. Modellen räknar i din webbläsare.</p>
-        <p class="sr-only">Bildbeskrivning: hjärnan har lösts upp. Ljuspunkterna svävar som ett glest moln.</p>
-        <details>
-          <summary>Så här är det egentligen</summary>
-          <p>Modellen här heter GPT-SW3 och är gjord av AI Sweden. Det här är en liten version med ungefär 136 miljoner inställbara tal, tränad på text på nordiska språk och engelska.</p>
-          <p>Den är en basmodell. Den svarar inte på frågor, den fortsätter bara texten. Chattbotar som ChatGPT är mycket större och har dessutom tränats för att föra samtal, men i grunden gör de samma sak.</p>
-        </details>
+          <div class="dock">
+            <details class="more">
+              <summary>Så här är det egentligen</summary>
+              <div class="panel">
+                <p>Resan inåt är ett berättargrepp. Ordningen följer uträkningen: först bitarna, sedan lagren och sist sannolikheterna. Djupet i bilden är däremot påhittat. I modellen ligger ingenting inuti något annat. Allt är tal i ett och samma program.</p>
+                <p>Modellen här heter GPT-SW3 och är gjord av AI Sweden. Det här är en liten version med ungefär 136 miljoner inställbara tal, tränad på text på nordiska språk och engelska.</p>
+                <p>Den är en basmodell. Den svarar inte på frågor, den fortsätter bara texten. Chattbotar som ChatGPT är mycket större och har dessutom tränats för att föra samtal, men i grunden gör de samma sak.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+        <p class="sr-only">Bildbeskrivning: kameran har åkt in genom hjärnans yta, och hjärnan har lösts upp. Ljuspunkterna svävar nu runt kameran åt alla håll, nära och långt bort. Några få lyser orange.</p>
       </div>
     </section>
 
     <!-- 2 -->
-    <section class="step" id="steg-2" data-side="center" aria-labelledby="h2">
-      <div class="card wide">
-        <p class="num">Steg 2 av 8</p>
-        <h2 id="h2">Modellen läser bitar, inte ord</h2>
-        <p>Först klyvs texten i bitar, som kallas tokens. Vanliga ord blir en bit. Ovanliga ord klyvs i flera.</p>
-        <div class="tokenbox" aria-live="polite">
-          <p class="tokenmeta"><strong id="tok-count">6 bitar</strong> <span id="tok-which">med modellens egen nordiska tokeniserare</span></p>
-          <div id="tokens" class="tokens"></div>
+    <section class="scene" id="steg-2" style="--len:4.2" aria-labelledby="h2">
+      <div class="hud">
+        <div class="stack">
+          <div class="out tokenbox" aria-live="polite">
+            <div id="tokens" class="tokens"></div>
+            <p class="tokenmeta"><strong id="tok-count">6 bitar</strong> <span id="tok-which">med modellens egen nordiska tokeniserare</span></p>
+          </div>
+          <div class="sub">
+            <h2 id="h2"><span>2</span> Bitar, inte ord</h2>
+            <p class="line">Modellen räknar inte med ord. Först klyvs texten i bitar, som kallas tokens.</p>
+            <p class="line">Vanliga ord blir en bit. Ovanliga ord klyvs i flera.</p>
+            <p class="line">Varje bit har en egen punkt i rummet. Linjen går från bit till bit genom din mening.</p>
+          </div>
+          <div class="dock">
+            <fieldset class="seg">
+              <legend>Språk</legend>
+              <label><input type="radio" name="lang" value="sv" checked><span>Svenska</span></label>
+              <label><input type="radio" name="lang" value="en"><span>Engelska</span></label>
+            </fieldset>
+            <fieldset class="seg">
+              <legend>Tokeniserare</legend>
+              <label><input type="radio" name="tokenizer" value="sw3" checked><span>Nordisk</span></label>
+              <label><input type="radio" name="tokenizer" value="gpt2"><span>Engelsk (GPT-2)</span></label>
+            </fieldset>
+            <p class="hint" id="tok-note">Prova den engelska tokeniseraren. Den klyver svenska ord i många fler bitar.</p>
+            <details class="more">
+              <summary>Så här är det egentligen</summary>
+              <div class="panel">
+                <p>Bitarna bestäms innan modellen tränas. Ett program räknar vilka teckenföljder som är vanligast i en stor mängd text och gör bitar av dem. Varje bit får ett nummer, och det är numren som modellen räknar med. Tecknet ␣ visar att biten börjar med ett mellanslag.</p>
+                <p>GPT-2 är en äldre engelsk modell och används här som jämförelse. Dess bitar har inga punkter i det här rummet. Den arbetar dessutom med byte, så en bokstav som ä kan klyvas mitt itu. Den halvan visas som ½.</p>
+              </div>
+            </details>
+          </div>
         </div>
-        <div class="toggles">
-          <fieldset>
-            <legend>Språk</legend>
-            <label><input type="radio" name="lang" value="sv" checked> Svenska</label>
-            <label><input type="radio" name="lang" value="en"> Samma mening på engelska</label>
-          </fieldset>
-          <fieldset>
-            <legend>Tokeniserare</legend>
-            <label><input type="radio" name="tokenizer" value="sw3" checked> Nordisk (GPT-SW3)</label>
-            <label><input type="radio" name="tokenizer" value="gpt2"> Engelsk (GPT-2)</label>
-          </fieldset>
-        </div>
-        <p class="note" id="tok-note">Prova att byta till den engelska tokeniseraren. Den har byggts av engelsk text och klyver svenska ord i många fler bitar.</p>
-        <p class="sr-only">Bildbeskrivning: meningen visas som en rad färgade rutor, en ruta per bit. Bakom svävar molnet av ljuspunkter.</p>
-        <details>
-          <summary>Så här är det egentligen</summary>
-          <p>Bitarna bestäms innan modellen tränas. Ett program räknar vilka teckenföljder som är vanligast i en stor mängd text och gör bitar av dem. Varje bit får ett nummer, och det är numren som modellen räknar med. Tecknet ␣ visar att biten börjar med ett mellanslag.</p>
-          <p>GPT-2 är en äldre engelsk modell och används här som jämförelse. Den arbetar dessutom med byte, så en bokstav som ä kan klyvas mitt itu. Den halvan visas som ½.</p>
-        </details>
+        <p class="sr-only">Bildbeskrivning: kameran åker genom rummet av ljuspunkter, från den ena orange punkten till den andra. Vid varje punkt står en bit av din mening, och en orange linje ritas mellan dem i den ordning de står i meningen.</p>
       </div>
     </section>
 
     <!-- 3 -->
-    <section class="step" id="steg-3" data-side="left" aria-labelledby="h3">
-      <div class="card">
-        <p class="num">Steg 3 av 8</p>
-        <h2 id="h3">Varje bit har en plats i ett rum</h2>
-        <p>Här är modellens alla 64 000 bitar. Bitar som brukar stå i liknande sammanhang ligger nära varandra. De orange punkterna är din mening.</p>
-        <form id="search-form" autocomplete="off">
-          <label for="search">Sök ett ord och se dess grannar</label>
-          <div class="inputrow">
-            <input id="search" type="text" maxlength="30" placeholder="till exempel måndag" spellcheck="false">
-            <button type="submit">Sök</button>
+    <section class="scene" id="steg-3" style="--len:3.2" aria-labelledby="h3">
+      <div class="hud">
+        <div class="stack">
+          <div class="sub">
+            <h2 id="h3"><span>3</span> Betydelserummet</h2>
+            <p class="line">Bitar som brukar stå i liknande sammanhang ligger nära varandra.</p>
+            <p class="line">Sök ett ord, så åker vi dit och ser vilka som ligger närmast.</p>
+            <p class="line">Sök på <em>glad</em>. Bland grannarna finns <em>ledsen</em>. Nära betyder alltså inte samma betydelse, utan att orden används på liknande sätt.</p>
           </div>
-        </form>
-        <div class="chips" id="search-suggestions" role="group" aria-label="Förslag på ord"></div>
-        <div id="neighbors" class="neighbors" aria-live="polite"></div>
-        <p class="note">Sök på <em>glad</em>. Bland grannarna finns <em>ledsen</em>. Närhet betyder alltså inte att orden betyder samma sak, utan att de används på liknande sätt.</p>
-        <p class="sr-only">Bildbeskrivning: ljuspunkterna har ordnat sig till något som liknar en galax med täta hopar och glesare stråk. Bitarna i din mening lyser orange och är sammanbundna med en linje. När du söker ett ord lyser ordet och dess närmaste grannar vitt.</p>
-        <details>
-          <summary>Så här är det egentligen</summary>
-          <p>Platsen för en bit är egentligen 768 tal, alltså en punkt i ett rum med 768 dimensioner. Bilden är en projektion ner till tre dimensioner, gjord med en metod som heter UMAP. Den förvränger avstånden. Grannarna i listan är därför uträknade i det riktiga rummet och inte i bilden.</p>
-          <p>Ingen människa har bestämt platserna. De ställdes in steg för steg när modellen tränades. Eftersom modellen är tränad på flera språk hittar du ofta samma ord på norska, danska och engelska bland grannarna.</p>
-        </details>
+          <div class="dock">
+            <form id="search-form" autocomplete="off">
+              <label for="search">Sök ett ord</label>
+              <div class="inputrow">
+                <input id="search" type="text" maxlength="30" placeholder="till exempel måndag" spellcheck="false">
+                <button type="submit">Sök</button>
+              </div>
+            </form>
+            <div class="chips" id="search-suggestions" role="group" aria-label="Förslag på ord"></div>
+            <p class="hint wide" id="search-msg" aria-live="polite" hidden></p>
+            <details class="more figures">
+              <summary>Visa som lista</summary>
+              <div class="panel"><div id="neighbors" class="neighbors"><p>Sök ett ord, så visas dess närmaste grannar här.</p></div></div>
+            </details>
+            <details class="more">
+              <summary>Så här är det egentligen</summary>
+              <div class="panel">
+                <p>Platsen för en bit är egentligen 768 tal, alltså en punkt i ett rum med 768 dimensioner. Bilden är en projektion ner till tre dimensioner, gjord med en metod som heter UMAP. Den förvränger avstånden. Grannarna och talen bredvid dem är därför uträknade i det riktiga rummet och inte i bilden. Talet är likheten mellan ordens vektorer, där 1 betyder identiska.</p>
+                <p>Ingen människa har bestämt platserna. De ställdes in steg för steg när modellen tränades. Eftersom modellen är tränad på flera språk hittar du ofta samma ord på norska, danska och engelska bland grannarna.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+        <p class="sr-only">Bildbeskrivning: kameran har backat en bit, och ljuspunkterna syns som täta hopar och glesare stråk runt din menings orange linje. När du söker ett ord åker kameran dit. Ordet och dess närmaste grannar lyser vitt, med ordet och ett likhetstal utskrivet vid varje punkt.</p>
       </div>
     </section>
 
     <!-- 4 -->
-    <section class="step" id="steg-4" data-side="right" aria-labelledby="h4">
-      <div class="card">
-        <p class="num">Steg 4 av 8</p>
-        <h2 id="h4">Orden runt omkring ändrar talen</h2>
-        <p>Ordet <em>fil</em> kan vara mat, ett körfält eller något i datorn. I rummet nyss har <em>fil</em> bara en plats. Skillnaden uppstår i modellens tolv lager, där talen för varje bit räknas om med hjälp av bitarna före.</p>
-        <div class="filpick" id="fil-pick" role="group" aria-label="Välj mening"></div>
-        <div id="fil-sentence" class="filsentence"></div>
-        <table class="filtable">
-          <caption>Likhet mellan de tre vektorerna för <em>fil</em> (1 = identiska)</caption>
-          <thead><tr><th scope="col">Par</th><th scope="col">Före lager 1</th><th scope="col">Efter lager 12</th></tr></thead>
-          <tbody id="fil-table"></tbody>
-        </table>
-        <p class="sr-only">Bildbeskrivning: ljuspunkterna har lagt sig i tolv skikt staplade på varandra. Tre färgade linjer börjar i samma punkt under det nedersta skiktet och glider isär medan de stiger genom skikten. Varje linje är ordet fil i en av de tre meningarna.</p>
-        <details>
-          <summary>Så här är det egentligen</summary>
-          <p>De tre linjerna är uppmätta i modellen. Före första lagret är talen för <em>fil</em> identiska i de tre meningarna. Efter varje lager skiljer de sig mer. Avståndet mellan linjerna visar vinkeln mellan vektorerna. Vad skillnaden innebär går inte att läsa av i bilden.</p>
-          <p>Strecken under meningen visar så kallade attention-vikter: hur tungt varje tidigare bit väger när talen för <em>fil</em> räknas om, i genomsnitt över modellens lager. I den här modellen hamnar det mesta av vikten på meningens första bit, så den biten är borträknad. Forskare är inte överens om hur mycket sådana vikter förklarar av det modellen räknar fram.</p>
-          <p>Modellen räknar bara bakåt. Ord som kommer efter <em>fil</em> kan inte påverka talen för <em>fil</em>. Därför står ordet sist i alla tre meningarna.</p>
-        </details>
+    <section class="scene" id="steg-4" style="--len:5.6" data-in="1.3" aria-labelledby="h4">
+      <div class="hud">
+        <div class="stack">
+          <div class="sub">
+            <h2 id="h4"><span>4</span> Sammanhanget</h2>
+            <p class="line">Ett exempel: ordet <em>fil</em> kan vara mat, ett körfält eller något i datorn. I rummet har <em>fil</em> ändå bara en punkt.</p>
+            <p class="line">Skillnaden uppstår i modellens tolv lager. I varje lager räknas talen för <em>fil</em> om med hjälp av bitarna före.</p>
+            <p class="line">De tre trådarna är samma ord i tre meningar. Talen mellan dem visar hur lika de är. 1 betyder identiska.</p>
+            <p class="line">Efter tolv lager har samma ord hamnat på tre olika platser.</p>
+          </div>
+          <div class="dock">
+            <div class="filpick" id="fil-pick" role="group" aria-label="Välj mening att följa"></div>
+            <p class="readout" id="fil-readout" aria-live="off">Före första lagret</p>
+            <details class="more figures">
+              <summary>Visa siffrorna</summary>
+              <div class="panel">
+                <p class="paneltitle">Hur tungt bitarna före väger när talen för <em>fil</em> räknas om</p>
+                <div id="fil-sentence" class="filsentence"></div>
+                <table class="filtable">
+                  <caption>Likhet mellan de tre vektorerna för <em>fil</em> (1 = identiska)</caption>
+                  <thead><tr><th scope="col">Par</th><th scope="col">Före lager 1</th><th scope="col">Efter lager 12</th></tr></thead>
+                  <tbody id="fil-table"></tbody>
+                </table>
+              </div>
+            </details>
+            <details class="more">
+              <summary>Så här är det egentligen</summary>
+              <div class="panel">
+                <p>De tre trådarna är uppmätta i modellen. Före första lagret är talen för <em>fil</em> identiska i de tre meningarna. Efter varje lager skiljer de sig mer. Avståndet mellan trådarna visar vinkeln mellan vektorerna. Vad skillnaden innebär går inte att läsa av i bilden.</p>
+                <p>Under ”Visa siffrorna” finns så kallade attention-vikter: hur tungt varje tidigare bit väger när talen för <em>fil</em> räknas om, i genomsnitt över modellens lager. I den här modellen hamnar det mesta av vikten på meningens första bit, så den biten är borträknad. Forskare är inte överens om hur mycket sådana vikter förklarar av det modellen räknar fram.</p>
+                <p>Modellen räknar bara bakåt. Ord som kommer efter <em>fil</em> kan inte påverka talen för <em>fil</em>. Därför står ordet sist i alla tre meningarna.</p>
+                <p>Lagren är inga skivor i ett rum. Ett lager är ett steg i uträkningen. Skivorna i bilden är till för att stegen ska synas.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+        <p class="sr-only">Bildbeskrivning: ljuspunkterna har lagt sig i tolv tunna skivor på rad, som en tunnel. Kameran åker rakt igenom dem, en i taget. Tre färgade trådar börjar i samma punkt framför den första skivan och glider isär för varje skiva de passerar. Mellan trådarnas spetsar står tal som visar hur lika de är.</p>
       </div>
     </section>
 
     <!-- 5 -->
-    <section class="step" id="steg-5" data-side="left" aria-labelledby="h5">
-      <div class="card">
-        <p class="num">Steg 5 av 8</p>
-        <h2 id="h5">En sannolikhet för varje bit</h2>
-        <p>Efter sista lagret räknar modellen fram en sannolikhet för var och en av de 64 000 bitarna: hur troligt det är att just den kommer härnäst. Solfjädern visar alla på en gång. Ju ljusare och längre ut, desto mer sannolik.</p>
-        <p class="context">Efter <q id="next-context">Biblioteket i Västervik ligger</q></p>
-        <ol id="top-list" class="toplist" aria-label="De tio mest sannolika nästa bitarna"></ol>
-        <p class="note" id="next-note">Modellen slår inte upp något. Prova meningen <em>Sveriges huvudstad är</em>. <em>Stockholm</em> får omkring 3 procent.</p>
-        <p class="sr-only">Bildbeskrivning: ljuspunkterna har spridit ut sig som en solfjäder. De flesta är mörka och ligger i en tät båge längst in. Ett tiotal lyser starkt och sticker ut långt, med ordet och sannolikheten utskrivna bredvid.</p>
-        <details>
-          <summary>Så här är det egentligen</summary>
-          <p>Sannolikheterna kommer ur mönster i den text som modellen tränades på. Ingenstans i modellen finns en tabell över fakta att slå i.</p>
-          <p>Den här modellen är liten, och den ger ofta låg sannolikhet även åt det som är rätt. Stora modeller ger oftare hög sannolikhet åt det som stämmer. De räknar ändå på samma sätt: en sannolikhet för varje möjlig nästa bit.</p>
-          <p>I solfjädern är avståndet ritat i en skala där varje steg utåt betyder tio gånger högre sannolikhet. Annars skulle bara en eller två punkter synas.</p>
-        </details>
+    <section class="scene" id="steg-5" style="--len:3.4" data-in="1.2" aria-labelledby="h5">
+      <div class="hud">
+        <div class="stack">
+          <div class="sub">
+            <h2 id="h5"><span>5</span> Nästa bit</h2>
+            <p class="line">Efter sista lagret räknar modellen fram en sannolikhet för var och en av de 64 000 bitarna.</p>
+            <p class="line">Solfjädern visar alla på en gång. Ju ljusare och längre ut, desto mer sannolik som nästa bit i din mening.</p>
+            <p class="line">Modellen slår inte upp något. Välj <em>Sveriges huvudstad är</em>. <em>Stockholm</em> får omkring 3 procent.</p>
+          </div>
+          <div class="dock">
+            <p class="context">Efter <q id="next-context">Biblioteket i Västervik ligger</q></p>
+            <div class="chips" id="presets-next" role="group" aria-label="Byt mening"></div>
+            <details class="more figures">
+              <summary>Visa som lista</summary>
+              <div class="panel">
+                <p class="paneltitle">De tio mest sannolika nästa bitarna</p>
+                <ol id="top-list" class="toplist" aria-label="De tio mest sannolika nästa bitarna"></ol>
+              </div>
+            </details>
+            <details class="more">
+              <summary>Så här är det egentligen</summary>
+              <div class="panel">
+                <p>Sannolikheterna kommer ur mönster i den text som modellen tränades på. Ingenstans i modellen finns en tabell över fakta att slå i.</p>
+                <p>Den här modellen är liten, och den ger ofta låg sannolikhet även åt det som är rätt. Stora modeller ger oftare hög sannolikhet åt det som stämmer. De räknar ändå på samma sätt: en sannolikhet för varje möjlig nästa bit.</p>
+                <p>I solfjädern är avståndet ritat i en skala där varje steg utåt betyder tio gånger högre sannolikhet. Annars skulle bara en eller två punkter synas.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+        <p class="sr-only">Bildbeskrivning: efter den sista skivan har ljuspunkterna spridit ut sig som en solfjäder framför kameran. De flesta är mörka och ligger i en tät båge längst in. Ett tiotal lyser starkt och sticker ut långt, med ordet och sannolikheten utskrivna bredvid.</p>
       </div>
     </section>
 
     <!-- 6 -->
-    <section class="step" id="steg-6" data-side="left" aria-labelledby="h6">
-      <div class="card">
-        <p class="num">Steg 6 av 8</p>
-        <h2 id="h6">Slumpen väljer</h2>
-        <p>Modellen tar inte alltid den mest sannolika biten. Den drar en bit med slumpen, där sannolika bitar vinner oftare. Sedan räknar den om allt och drar nästa.</p>
-        <div class="slider">
-          <label for="temperature">Temperatur: <output id="temperature-out" for="temperature">0,7</output></label>
-          <input id="temperature" type="range" min="0" max="1.5" step="0.1" value="0.7" aria-describedby="temperature-help">
-          <p id="temperature-help" class="scale"><span>0: alltid den mest sannolika</span><span>1,5: nästan vad som helst</span></p>
+    <section class="scene" id="steg-6" style="--len:2.8" data-in="0.8" aria-labelledby="h6">
+      <div class="hud">
+        <div class="stack">
+          <ol id="runs" class="out runs" aria-live="polite" aria-label="Fortsättningar"></ol>
+          <div class="sub">
+            <h2 id="h6"><span>6</span> Slumpen</h2>
+            <p class="line">Modellen tar inte alltid den mest sannolika biten. Den drar en bit med slumpen, där sannolika bitar vinner oftare.</p>
+            <p class="line">Sedan räknas allt om och nästa bit dras. Ändra temperaturen och fortsätt meningen några gånger.</p>
+          </div>
+          <div class="dock">
+            <div class="slider">
+              <label for="temperature">Temperatur <output id="temperature-out" for="temperature">0,7</output></label>
+              <input id="temperature" type="range" min="0" max="1.5" step="0.1" value="0.7" aria-describedby="temperature-help">
+              <p id="temperature-help" class="scale"><span>0: alltid den mest sannolika</span><span>1,5: nästan vad som helst</span></p>
+            </div>
+            <button id="run-again" class="primary">Fortsätt meningen</button>
+            <details class="more">
+              <summary>Så här är det egentligen</summary>
+              <div class="panel">
+                <p>Temperaturen ändrar sannolikheterna innan slumpen drar. Vid 0 väljs alltid den mest sannolika biten, och texten blir densamma varje gång. Den fastnar då lätt i upprepningar. Vid höga värden jämnas sannolikheterna ut och texten faller isär.</p>
+                <p>Chattbotar brukar ligga någonstans däremellan. Därför kan samma fråga ge olika svar, och det är ett val av dem som byggt tjänsten och inget fel.</p>
+              </div>
+            </details>
+          </div>
         </div>
-        <button id="run-again" class="primary">Fortsätt meningen</button>
-        <ol id="runs" class="runs" aria-live="polite" aria-label="Fortsättningar"></ol>
-        <p class="sr-only">Bildbeskrivning: samma solfjäder som i förra steget. När du höjer temperaturen blir fler punkter ljusa och solfjädern jämnare. När du sänker den lyser bara några få.</p>
-        <details>
-          <summary>Så här är det egentligen</summary>
-          <p>Temperaturen ändrar sannolikheterna innan slumpen drar. Vid 0 väljs alltid den mest sannolika biten, och texten blir densamma varje gång. Den fastnar då lätt i upprepningar. Vid höga värden jämnas sannolikheterna ut och texten faller isär.</p>
-          <p>Chattbotar brukar ligga någonstans däremellan. Därför kan samma fråga ge olika svar, och det är ett val av dem som byggt tjänsten och inget fel.</p>
-        </details>
+        <p class="sr-only">Bildbeskrivning: samma solfjäder som i förra scenen. När du höjer temperaturen blir fler punkter ljusa och solfjädern jämnare. När du sänker den lyser bara några få.</p>
       </div>
     </section>
 
     <!-- 7 -->
-    <section class="step" id="steg-7" data-side="center" aria-labelledby="h7">
-      <div class="card wide">
-        <p class="num">Steg 7 av 8</p>
-        <h2 id="h7">Flytande text om något som inte finns</h2>
-        <p>Det finns inget Nobelpris i bibliotekskunskap. Modellen fortsätter meningen ändå, lika flytande som annars.</p>
-        <form id="hallu-form" autocomplete="off">
-          <label for="hallu-input">Början på en mening om något som inte finns</label>
-          <div class="inputrow">
-            <input id="hallu-input" type="text" maxlength="140" value="Nobelpriset i bibliotekskunskap delades år 2019 ut till" spellcheck="false">
-            <button type="submit" id="hallu-run">Fortsätt</button>
+    <section class="scene" id="steg-7" style="--len:3" data-in="1.2" aria-labelledby="h7">
+      <div class="hud">
+        <div class="stack">
+          <p id="hallu-text" class="out hallu" aria-live="polite"></p>
+          <div class="sub">
+            <h2 id="h7"><span>7</span> Hallucinationen</h2>
+            <p class="line">Det finns inget Nobelpris i bibliotekskunskap. Modellen fortsätter meningen ändå, lika flytande som annars.</p>
+            <p class="line">Strecket under varje bit visar hur sannolik den var när den valdes. Inget steg i uträkningen kontrollerar om det som står är sant.</p>
           </div>
-        </form>
-        <p id="hallu-text" class="hallu" aria-live="polite"></p>
-        <p class="legend" aria-hidden="true"><span class="sw lo"></span> osannolik bit <span class="sw mid"></span> <span class="sw hi"></span> mycket sannolik bit</p>
-        <p class="note">Färgen visar hur sannolik varje bit var när den valdes. Många bitar har hög sannolikhet. Inget steg i uträkningen kontrollerar om det som står är sant.</p>
-        <p class="sr-only">Bildbeskrivning: ljuspunkterna rinner som en bred ström från vänster till höger bakom texten.</p>
-        <details>
-          <summary>Så här är det egentligen</summary>
-          <p>Hög sannolikhet betyder att en sådan bit brukar följa på en sådan text. Det betyder inte att påståendet stämmer. En text om ett pris som inte finns liknar texter om pris som finns, och då blir fortsättningen flytande.</p>
-          <p>Detta brukar kallas hallucination. Ordet är omdiskuterat, eftersom det låter som om modellen upplever något. Det som händer är att modellen räknar på precis samma sätt som alltid.</p>
-        </details>
+          <div class="dock">
+            <form id="hallu-form" autocomplete="off">
+              <label for="hallu-input">Början på en mening om något som inte finns</label>
+              <div class="inputrow">
+                <input id="hallu-input" type="text" maxlength="140" value="Nobelpriset i bibliotekskunskap delades år 2019 ut till" spellcheck="false">
+                <button type="submit" id="hallu-run">Fortsätt</button>
+              </div>
+            </form>
+            <p class="legend" aria-hidden="true"><span class="sw lo"></span> osannolik bit <span class="sw mid"></span> <span class="sw hi"></span> mycket sannolik bit</p>
+            <details class="more">
+              <summary>Så här är det egentligen</summary>
+              <div class="panel">
+                <p>Hög sannolikhet betyder att en sådan bit brukar följa på en sådan text. Det betyder inte att påståendet stämmer. En text om ett pris som inte finns liknar texter om pris som finns, och då blir fortsättningen flytande.</p>
+                <p>Detta brukar kallas hallucination. Ordet är omdiskuterat, eftersom det låter som om modellen upplever något. Det som händer är att modellen räknar på precis samma sätt som alltid.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+        <p class="sr-only">Bildbeskrivning: kameran har åkt rakt igenom solfjädern. Ljuspunkterna rinner nu förbi runt kameran som en ström, och i mitten skrivs texten fram bit för bit.</p>
       </div>
     </section>
 
     <!-- 8 -->
-    <section class="step" id="steg-8" data-side="center" aria-labelledby="h8">
-      <div class="card wide">
-        <p class="num">Steg 8 av 8</p>
-        <h2 id="h8">Vad betyder det för dig?</h2>
-        <p>Du har sett en liten modell klyva en mening i bitar, räkna om talen i tolv lager och dra nästa bit med slumpens hjälp. ChatGPT och andra chattbotar är mycket större, men de bygger på samma princip. Ta med dig fyra frågor.</p>
-        <ul class="questions">
-          <li><strong>Låter svaret säkert, eller är det säkert?</strong> En text som flyter är inte därför sann.</li>
-          <li><strong>Går uppgiften att hitta i en annan källa?</strong> Be om källan och kontrollera att den finns och säger det som påstås.</li>
-          <li><strong>Skulle jag få samma svar en gång till?</strong> Slumpen är med i varje svar.</li>
-          <li><strong>Vad händer om svaret är fel?</strong> Ju mer som står på spel, desto viktigare är kontrollen.</li>
-        </ul>
-        <p class="sr-only">Bildbeskrivning: ljuspunkterna har åter samlats till galaxen, nu sedd på långt håll.</p>
-        <details>
-          <summary>Så här är det egentligen</summary>
-          <p>Den lilla modellen på den här sidan skriver fel mycket oftare än en stor chattbot. Stora modeller har tränats på mer text, är mycket större och kan ofta söka på webben och hänvisa till källor. De skriver därför rätt betydligt oftare.</p>
-          <p>Grunden är ändå densamma. Texten byggs bit för bit efter sannolikhet, och ett svar kan vara fel utan att det märks på språket. Slutsatsen är alltså inte att AI alltid hittar på, utan att du behöver kontrollera det som är viktigt.</p>
-        </details>
-        <p class="outro"><a class="button" href="https://aifolkbildaren.se">Till AI-Folkbildaren</a> <a class="textlink" href="#steg-1">Börja om med en ny mening</a></p>
-        <footer>
-          <p>Modellen är <a href="https://huggingface.co/AI-Sweden-Models/gpt-sw3-126m">GPT-SW3 126M</a>, skapad av AI Sweden tillsammans med RISE och WASP. Sidan använder en <a href="https://huggingface.co/HuggingVidar/gpt-sw3-126m-onnx">version som gjorts om för webbläsaren</a>, enligt <a href="https://huggingface.co/HuggingVidar/gpt-sw3-126m-onnx/blob/main/LICENSE">AI Swedens licens</a>. AI Sweden, RISE och WASP har inte medverkat till sidan.</p>
-          <p>Modellen räknar i din webbläsare, och ingen text skickas någonstans.</p>
-          <p>Sidan är gjord av AI-Folkbildaren.</p>
-        </footer>
+    <section class="scene" id="steg-8" style="--len:3.5" data-in="1.1" aria-labelledby="h8">
+      <div class="hud">
+        <div class="closing">
+          <div class="stack">
+            <div class="sub">
+              <p class="line">Vi backar ut. Här är alla 64 000 bitarna igen, och din mening bland dem. Någon hjärna fanns det inte, bara en uträkning.</p>
+            </div>
+          </div>
+        </div>
+        <div class="outro">
+          <h2 id="h8">Vad betyder det för dig?</h2>
+          <p>Du har följt en mening in i en liten modell: den klövs i bitar, talen räknades om i tolv lager och nästa bit drogs med slumpens hjälp. ChatGPT och andra chattbotar är mycket större, men de bygger på samma princip. Ta med dig fyra frågor.</p>
+          <ul class="questions">
+            <li><strong>Låter svaret säkert, eller är det säkert?</strong> En text som flyter är inte därför sann.</li>
+            <li><strong>Går uppgiften att hitta i en annan källa?</strong> Be om källan och kontrollera att den finns och säger det som påstås.</li>
+            <li><strong>Skulle jag få samma svar en gång till?</strong> Slumpen är med i varje svar.</li>
+            <li><strong>Vad händer om svaret är fel?</strong> Ju mer som står på spel, desto viktigare är kontrollen.</li>
+          </ul>
+          <p class="outrolinks"><a class="button" href="https://aifolkbildaren.se">Till AI-Folkbildaren</a> <a class="textlink" href="#steg-0">Börja om med en ny mening</a></p>
+          <details class="more up">
+            <summary>Så här är det egentligen</summary>
+            <div class="panel">
+              <p>Den lilla modellen på den här sidan skriver fel mycket oftare än en stor chattbot. Stora modeller har tränats på mer text, är mycket större och kan ofta söka på webben och hänvisa till källor. De skriver därför rätt betydligt oftare.</p>
+              <p>Grunden är ändå densamma. Texten byggs bit för bit efter sannolikhet, och ett svar kan vara fel utan att det märks på språket. Slutsatsen är alltså inte att AI alltid hittar på, utan att du behöver kontrollera det som är viktigt.</p>
+            </div>
+          </details>
+          <footer>
+            <p>Modellen är <a href="https://huggingface.co/AI-Sweden-Models/gpt-sw3-126m">GPT-SW3 126M</a>, skapad av AI Sweden tillsammans med RISE och WASP. Sidan använder en <a href="https://huggingface.co/HuggingVidar/gpt-sw3-126m-onnx">version som gjorts om för webbläsaren</a>, enligt <a href="https://huggingface.co/HuggingVidar/gpt-sw3-126m-onnx/blob/main/LICENSE">AI Swedens licens</a>. AI Sweden, RISE och WASP har inte medverkat till sidan. Modellen räknar i din webbläsare, och ingen text skickas någonstans. Sidan är gjord av AI-Folkbildaren.</p>
+          </footer>
+        </div>
+        <p class="sr-only">Bildbeskrivning: kameran har backat ut. Alla ljuspunkter syns på håll som en galax, utan någon hjärnform. Bitarna i din mening lyser orange.</p>
       </div>
     </section>
   </main>
