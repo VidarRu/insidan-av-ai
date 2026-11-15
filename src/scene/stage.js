@@ -16,6 +16,32 @@ const smooth = (x) => { x = clamp01(x); return x * x * (3 - 2 * x); };
 
 // Färglägen i shadern
 const MODE = { brain: 0, dust: 1, galaxy: 2, layers: 3, fan: 4, stream: 5 };
+// Fyra former är solfjädrar. Varje har sina egna sannolikheter:
+// fan = din mening, bias = yrket till vänster, rate = efterträningen, lean = frågan utan åsikt.
+const FAN_SHAPES = ['fan', 'bias', 'rate', 'lean'];
+const TWO_UP = ['bias', 'lean']; // här står en andra solfjäder bredvid
+
+// Den andra solfjädern i scenerna med två bredvid varandra. Den ritas med egna
+// punkter, eftersom de 64 000 partiklarna redan används av den första.
+const SIDE_VERT = /* glsl */ `
+  attribute float aBright;
+  uniform float uSize;
+  uniform float uScale;
+  uniform float uOpacity;
+  varying vec3 vColor;
+  varying float vAlpha;
+  void main() {
+    vec3 c = mix(vec3(0.13, 0.22, 0.6), vec3(1.0, 0.86, 0.6), smoothstep(0.02, 0.5, aBright));
+    vColor = c * (0.05 + 2.2 * aBright);
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    float d = max(-mv.z, 0.02);
+    float px = uSize * (0.7 + 5.0 * aBright) * uScale / d;
+    float soft = max(1.0, px / (0.011 * uScale));
+    vAlpha = uOpacity / pow(soft, 0.9);
+    gl_PointSize = min(px, 0.1 * uScale);
+  }
+`;
 
 const VERT = /* glsl */ `
   attribute vec3 aFrom;
@@ -137,6 +163,9 @@ const VIEWS = [
   { shape: 'layers', mode: MODE.layers, accent: 0, fog: 0.09, shift: 0, lift: 0.06 },
   { shape: 'fan', mode: MODE.fan, accent: 0, fog: 0, shift: 0, lift: 0.14 },
   { shape: 'fan', mode: MODE.fan, accent: 0, fog: 0, shift: 0, lift: 0.14 },
+  { shape: 'bias', mode: MODE.fan, accent: 0, fog: 0, shift: 0, lift: 0.08 },
+  { shape: 'rate', mode: MODE.fan, accent: 0, fog: 0, shift: 0, lift: 0.19 },
+  { shape: 'lean', mode: MODE.fan, accent: 0, fog: 0, shift: 0, lift: 0.08 },
   { shape: 'stream', mode: MODE.stream, accent: 0, fog: 0.06, shift: 0, lift: 0 },
   { shape: 'far', mode: MODE.galaxy, accent: 1, fog: 0, shift: 0, lift: 0 },
 ];
@@ -188,8 +217,15 @@ export class Stage {
       stream: { pos: buildStream().pos, bright: new Float32Array(N) },
     };
     // Innan några sannolikheter finns: en jämn solfjäder
-    buildFan(new Float64Array(N).fill(1 / N), this.shapes.fan);
-    this.fanTarget = null;
+    this.narrow = window.innerWidth < 820;
+    const even = new Float64Array(N).fill(1 / N);
+    for (const name of FAN_SHAPES) {
+      const sh = this.shapes[name] || (this.shapes[name] = { pos: new Float32Array(N * 3), bright: new Float32Array(N) });
+      sh.offset = this.fanOffset(name);
+      sh.order = buildFan(even, sh, sh.offset).order;
+    }
+    this.fanTargets = {};
+    this.ribShape = null;
 
     // Partiklarna
     const geo = new THREE.BufferGeometry();
@@ -248,6 +284,22 @@ export class Stage {
     // Solfjäderns ribbor
     this.fanRibs = this.makeSegments(0xffd9a0, RIBS, true);
     this.group.add(this.fanRibs);
+
+    // Den andra solfjädern: egna punkter och ribbor, och ett innehåll per scen
+    const sideGeo = new THREE.BufferGeometry();
+    sideGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3).setUsage(THREE.DynamicDrawUsage));
+    sideGeo.setAttribute('aBright', new THREE.BufferAttribute(new Float32Array(N), 1).setUsage(THREE.DynamicDrawUsage));
+    sideGeo.boundingSphere = new THREE.Sphere(new V3(), 100);
+    this.sideUniforms = { uSize: this.uniforms.uSize, uScale: this.uniforms.uScale, uOpacity: { value: 0 } };
+    this.sidePoints = new THREE.Points(sideGeo, new THREE.ShaderMaterial({
+      uniforms: this.sideUniforms, vertexShader: SIDE_VERT, fragmentShader: FRAG,
+      blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true,
+    }));
+    this.sidePoints.frustumCulled = false; this.sidePoints.visible = false;
+    this.sideRibs = this.makeSegments(0xffd9a0, RIBS, true);
+    this.group.add(this.sidePoints, this.sideRibs);
+    this.sides = {};       // scenens namn -> { pos, bright, order, offset, probs }
+    this.sideKey = null; this.sideTarget = null;
 
     const v = this.view(0, 0);
     this.camPos = v.pos.clone(); this.camLook = v.look.clone();
@@ -330,37 +382,75 @@ export class Stage {
     return new V3(g[id * 3], g[id * 3 + 1], g[id * 3 + 2]);
   }
 
-  // Nya sannolikheter: solfjädern formas om
-  setProbabilities(probs, animate = true) {
-    const target = buildFan(probs);
-    this.fanOrder = target.order;
-    this.fanProbs = probs;
-    if (!animate || this.reduced) {
-      this.shapes.fan.pos.set(target.pos); this.shapes.fan.bright.set(target.bright);
-      this.fanTarget = null; this.uploadShape('fan'); this.updateRibs();
+  // Var en solfjäder står. I scenerna med två står den första till vänster och
+  // den andra till höger. På smala skärmar står de över varandra.
+  fanOffset(name, side = -1) {
+    if (!TWO_UP.includes(name)) return [0, 0];
+    return this.narrow ? [0, -side * 1.45] : [side * 2.35, 0];
+  }
+
+  // Nya sannolikheter: solfjädern formas om. name säger vilken av solfjädrarna.
+  setProbabilities(probs, animate = true, name = 'fan') {
+    const sh = this.shapes[name];
+    sh.probs = probs; sh.offset = this.fanOffset(name);
+    const target = buildFan(probs, null, sh.offset);
+    sh.order = target.order;
+    if (!animate || this.reduced || this.weight(name) === 0) {
+      sh.pos.set(target.pos); sh.bright.set(target.bright);
+      delete this.fanTargets[name]; this.uploadShape(name);
+      if (this.ribShape === name) this.updateRibs();
     } else {
-      this.fanTarget = { from: { pos: this.shapes.fan.pos.slice(), bright: this.shapes.fan.bright.slice() }, to: target, t: 0 };
+      this.fanTargets[name] = { from: { pos: sh.pos.slice(), bright: sh.bright.slice() }, to: target, t: 0 };
     }
   }
 
-  fanPosition(id) {
-    const f = this.shapes.fan.pos;
+  fanPosition(id, name = 'fan') {
+    const f = this.shapes[name].pos;
     return new V3(f[id * 3], f[id * 3 + 1], f[id * 3 + 2]);
   }
 
-  updateRibs() {
-    if (!this.fanOrder) return;
-    const pos = this.fanRibs.geometry.attributes.position.array, col = this.fanRibs.geometry.attributes.color.array;
-    const f = this.shapes.fan.pos, b = this.shapes.fan.bright;
-    const n = RIBS;
-    for (let r = 0; r < n; r++) {
-      const id = this.fanOrder[r], k = Math.min(1, b[id] * 1.5 + 0.035) * (0.2 + 0.8 / (1 + r / 90));
-      pos.set([FAN_PIVOT[0], FAN_PIVOT[1], FAN_PIVOT[2], f[id * 3], f[id * 3 + 1], f[id * 3 + 2]], r * 6);
+  // Den andra solfjädern, den till höger, i scenen name ('bias' eller 'lean')
+  setSideProbabilities(name, probs, animate = true) {
+    const offset = this.fanOffset(name, 1);
+    const target = buildFan(probs, null, offset);
+    const old = this.sides[name];
+    this.sides[name] = { pos: target.pos, bright: target.bright, order: target.order, offset, probs };
+    if (this.sideKey !== name) return;
+    if (animate && !this.reduced && old) {
+      const g = this.sidePoints.geometry.attributes;
+      this.sideTarget = { from: { pos: g.position.array.slice(), bright: g.aBright.array.slice() }, to: target, t: 0 };
+    } else { this.sideTarget = null; this.uploadSide(); }
+  }
+
+  sidePosition(id, name) {
+    const f = this.sides[name]?.pos;
+    return f ? new V3(f[id * 3], f[id * 3 + 1], f[id * 3 + 2]) : new V3();
+  }
+
+  uploadSide() {
+    const sd = this.sides[this.sideKey], g = this.sidePoints.geometry.attributes;
+    if (!sd) return;
+    g.position.array.set(sd.pos); g.aBright.array.set(sd.bright);
+    g.position.needsUpdate = g.aBright.needsUpdate = true;
+    this.fillRibs(this.sideRibs, sd.pos, sd.bright, sd.order, sd.offset);
+  }
+
+  fillRibs(lines, f, b, order, offset) {
+    const pos = lines.geometry.attributes.position.array, col = lines.geometry.attributes.color.array;
+    const px = FAN_PIVOT[0] + offset[0], py = FAN_PIVOT[1] + offset[1];
+    for (let r = 0; r < RIBS; r++) {
+      const id = order[r], k = Math.min(1, b[id] * 1.5 + 0.035) * (0.2 + 0.8 / (1 + r / 90));
+      pos.set([px, py, FAN_PIVOT[2], f[id * 3], f[id * 3 + 1], f[id * 3 + 2]], r * 6);
       col.set([k * 0.1, k * 0.09, k * 0.12, k, k * 0.82, k * 0.58], r * 6);
     }
-    this.fanRibs.geometry.attributes.position.needsUpdate = true;
-    this.fanRibs.geometry.attributes.color.needsUpdate = true;
-    this.fanRibs.geometry.setDrawRange(0, n * 2);
+    lines.geometry.attributes.position.needsUpdate = true;
+    lines.geometry.attributes.color.needsUpdate = true;
+    lines.geometry.setDrawRange(0, RIBS * 2);
+  }
+
+  updateRibs() {
+    const sh = this.shapes[this.ribShape];
+    if (sh && sh.order) this.fillRibs(this.fanRibs, sh.pos, sh.bright, sh.order, sh.offset);
   }
 
   // De tre trådarna för ordet "fil" genom lagren. triangles: 13 x 3 x 2.
@@ -457,7 +547,13 @@ export class Stage {
       }
       case 5: return { pos: new V3(0, 0, FAN_Z + (this.narrow ? 6.6 : 5.0) - 0.2 * q), look: new V3(0, 0, FAN_Z) };
       case 6: return { pos: new V3(0, 0, FAN_Z + (this.narrow ? 6.4 : 4.8) - 0.1 * q), look: new V3(0, 0, FAN_Z) };
-      case 7: { // genom solfjädern och in i strömmen
+      case 7: case 9: { // två solfjädrar bredvid varandra: kameran backar så att båda får plats
+        const half = 0.384 * this.camera.aspect; // halva bildens bredd per längdenhet avstånd
+        const d = this.narrow ? Math.max(16, 2.3 / half) : Math.max(6.4, 4.75 / half);
+        return { pos: new V3(0, 0, FAN_Z + d - 0.15 * q), look: new V3(0, 0, FAN_Z) };
+      }
+      case 8: return { pos: new V3(0, 0, FAN_Z + (this.narrow ? 7.8 : 5.7) - 0.15 * q), look: new V3(0, 0, FAN_Z) };
+      case 10: { // genom solfjädern och in i strömmen
         const z = FAN_Z - 2.5 - 2 * q;
         return { pos: new V3(0, 0, z), look: new V3(0.3 * Math.sin(time * 0.1), 0, z - 5) };
       }
@@ -492,7 +588,15 @@ export class Stage {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.uniforms.uScale.value = h * this.pixelRatio;
+    const was = this.narrow;
     this.narrow = w < 820;
+    // Två solfjädrar står bredvid varandra på breda skärmar och över varandra på smala
+    if (was !== undefined && was !== this.narrow && this.sides) {
+      for (const name of TWO_UP) {
+        if (this.shapes[name].probs) this.setProbabilities(this.shapes[name].probs, false, name);
+        if (this.sides[name]) this.setSideProbabilities(name, this.sides[name].probs, false);
+      }
+    }
   }
 
   // Hur mycket scen nummer step syns just nu (0..1), och samma sak för ett spann av scener
@@ -516,14 +620,18 @@ export class Stage {
     this.uniforms.uFlow.value = (this.time * 0.55) % STREAM_LEN;
 
     // Solfjädern formas om mjukt när sannolikheterna ändras
-    if (this.fanTarget) {
-      const f = this.fanTarget; f.t = Math.min(1, f.t + dt / 0.7);
+    const blend = (f, p, b) => {
+      f.t = Math.min(1, f.t + dt / 0.7);
       const e = f.t * f.t * (3 - 2 * f.t);
-      const p = this.shapes.fan.pos, b = this.shapes.fan.bright;
       for (let i = 0; i < p.length; i++) p[i] = f.from.pos[i] + (f.to.pos[i] - f.from.pos[i]) * e;
       for (let i = 0; i < b.length; i++) b[i] = f.from.bright[i] + (f.to.bright[i] - f.from.bright[i]) * e;
-      if (f.t >= 1) this.fanTarget = null;
-      this.uploadShape('fan'); this.updateRibs();
+      return f.t >= 1;
+    };
+    for (const name of Object.keys(this.fanTargets)) {
+      const sh = this.shapes[name];
+      if (blend(this.fanTargets[name], sh.pos, sh.bright)) delete this.fanTargets[name];
+      this.uploadShape(name);
+      if (this.ribShape === name) this.updateRibs();
     }
 
     // Kamera: scenens egen åkning, och en mjuk övergång mellan två scener
@@ -588,17 +696,38 @@ export class Stage {
       for (const o of this.filGroup.children) o.material.opacity = layW * o.material.userData.base;
     }
 
-    const fanW = Math.max(0, this.weight('fan') * 2 - 1);
+    // Ribborna hör till den solfjäder som syns mest just nu
+    const near = VIEWS[Math.min(LAST, Math.round(this.stage))].shape;
+    const ribShape = FAN_SHAPES.includes(near) ? near : null;
+    if (ribShape !== this.ribShape) { this.ribShape = ribShape; this.updateRibs(); }
+    const fanW = ribShape ? Math.max(0, this.weight(ribShape) * 2 - 1) : 0;
     this.fanRibs.material.opacity = 0.6 * fanW; this.fanRibs.visible = fanW > 0;
+
+    // Den andra solfjädern syns bara i scenerna med två bredvid varandra
+    const sideKey = this.stage < 8 ? 'bias' : 'lean';
+    if (sideKey !== this.sideKey) { this.sideKey = sideKey; this.sideTarget = null; this.uploadSide(); }
+    if (this.sideTarget) {
+      const g = this.sidePoints.geometry.attributes, sd = this.sides[sideKey];
+      const done = blend(this.sideTarget, g.position.array, g.aBright.array);
+      g.position.needsUpdate = g.aBright.needsUpdate = true;
+      this.fillRibs(this.sideRibs, g.position.array, g.aBright.array, sd.order, sd.offset);
+      if (done) this.sideTarget = null;
+    }
+    const sideW = this.sides[sideKey] ? Math.max(0, this.weight(sideKey) * 2 - 1) : 0;
+    this.sideUniforms.uOpacity.value = sideW;
+    this.sidePoints.visible = this.sideRibs.visible = sideW > 0;
+    this.sideRibs.material.opacity = 0.6 * sideW;
+
     // Bakom texten i de två sista scenerna lyser partiklarna svagare
-    this.uniforms.uDim.value = 1 - 0.3 * clamp01(this.stage - 7.2);
+    this.uniforms.uDim.value = 1 - 0.3 * clamp01(this.stage - (LAST - 0.8));
 
     // Etiketter
     const v = new V3();
-    const groupWeight = { galaxy: galW, search: searchW, fil: Math.max(0, this.weightOfStep(4) * 2 - 1), fan: this.inScenes(5, 6) };
+    const only = (step) => Math.max(0, this.weightOfStep(step) * 2 - 1);
+    const groupWeight = { galaxy: galW, search: searchW, fil: only(4), fan: this.inScenes(5, 6), bias: only(7), rate: only(8), lean: only(9) };
     const placed = [];
     for (const l of this.labels.values()) {
-      const w = Math.min(1, groupWeight[l.group] ?? 0) * (l.vis ? l.vis() : 1);
+      const w = Math.min(1, groupWeight[l.group.split('.')[0]] ?? 0) * (l.vis ? l.vis() : 1);
       if (w <= 0.01) { l.el.style.opacity = 0; l.el.style.visibility = 'hidden'; continue; }
       v.copy(l.getPos()).applyMatrix4(this.camera.matrixWorldInverse);
       if (v.z > -0.08) { l.el.style.visibility = 'hidden'; continue; } // bakom kameran

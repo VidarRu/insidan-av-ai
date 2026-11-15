@@ -34,8 +34,11 @@
       <li><a href="#steg-4"><span>Sammanhanget</span></a></li>
       <li><a href="#steg-5"><span>Nästa bit</span></a></li>
       <li><a href="#steg-6"><span>Slumpen</span></a></li>
-      <li><a href="#steg-7"><span>Hallucinationen</span></a></li>
-      <li><a href="#steg-8"><span>För dig</span></a></li>
+      <li><a href="#steg-7"><span>Skevheten</span></a></li>
+      <li><a href="#steg-8"><span>Efterträningen</span></a></li>
+      <li><a href="#steg-9"><span>Medhållet</span></a></li>
+      <li><a href="#steg-10"><span>Hallucinationen</span></a></li>
+      <li><a href="#steg-11"><span>För dig</span></a></li>
     </ol>
   </nav>
 
@@ -278,12 +281,139 @@
     </section>
 
     <!-- 7 -->
-    <section class="scene" id="steg-7" style="--len:3" data-in="1.2" aria-labelledby="h7">
+    <section class="scene" id="steg-7" style="--len:3.6" data-in="1" aria-labelledby="h7">
+      <div class="hud">
+        <div class="stack">
+          <div class="sub">
+            <h2 id="h7"><span>7</span> Skevheten</h2>
+            <p class="line">Sannolikheterna kommer ur träningstexten. Mönster som finns i texten följer med, också de skeva.</p>
+            <p class="line">Här står två solfjädrar bredvid varandra. Meningarna är lika. Bara yrket skiljer.</p>
+            <p class="line">Jämför <em>hon</em> och <em>han</em> i de två solfjädrarna. Byt sedan yrken.</p>
+            <p class="line">Ingen har skrivit in någon regel om yrken och kön. Talen har ställts in av texten.</p>
+          </div>
+          <div class="dock">
+            <div class="chips" id="bias-pairs" role="group" aria-label="Välj två yrken att jämföra"></div>
+            <form id="bias-form" autocomplete="off">
+              <label for="bias-input">Eget ord till vänster</label>
+              <div class="inputrow">
+                <input id="bias-input" type="text" maxlength="40" placeholder="till exempel Brandmannen" spellcheck="false">
+                <button type="submit">Räkna</button>
+              </div>
+            </form>
+            <p class="hint wide" id="bias-msg" aria-live="polite" hidden></p>
+            <details class="more figures">
+              <summary>Visa som lista</summary>
+              <div class="panel">
+                <table class="filtable">
+                  <caption>Sannolikhet för nästa bit efter de två meningarna</caption>
+                  <thead><tr><th scope="col">Mening</th><th scope="col">hon</th><th scope="col">han</th><th scope="col">De fem mest sannolika</th></tr></thead>
+                  <tbody id="bias-table"></tbody>
+                </table>
+              </div>
+            </details>
+            <details class="more">
+              <summary>Så här är det egentligen</summary>
+              <div class="panel">
+                <p>Sidan visar modellens sannolikheter. Vi har inte räknat orden i träningstexten, så vi kan inte visa hur skev själva texten är. Modellens tal har ställts in av träningstexten och inget annat, men mönstret kan vara både starkare och svagare i modellen än i texten.</p>
+                <p>Kön och yrke är bara ett exempel som är lätt att mäta. Samma sak gäller vilka språk, platser, grupper och åsikter det finns mycket text om, och hur det skrivs om dem.</p>
+                <p>Meningarna fortsätter oftast med något annat än <em>hon</em> eller <em>han</em>. Det är förhållandet mellan de två som skiljer.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+        <p class="sr-only">Bildbeskrivning: två solfjädrar av ljuspunkter står bredvid varandra. Över varje står en mening som bara skiljer sig i yrket. I båda är orden hon och han utmärkta med sin sannolikhet. Siffrorna finns under Visa som lista.</p>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="scene" id="steg-8" style="--len:3.6" data-in="1" aria-labelledby="h8">
+      <div class="hud">
+        <div class="stack">
+          <div class="sub">
+            <h2 id="h8"><span>8</span> Efterträningen</h2>
+            <p class="line">Modellen på den här sidan är bara tränad att fortsätta text. En chattbot har tränats vidare efter det.</p>
+            <p class="line">I en vanlig metod får människor sätta betyg på svar. Sedan ställs modellens tal om, så att svar som liknar de högt betygsatta blir mer sannolika.</p>
+            <p class="line">Solfjädern formas om. Den visar inte längre bara vad som brukar stå i text, utan också vad människor har gett högt betyg.</p>
+            <p class="line">De som sätter betygen, och de som skriver reglerna för betygen, påverkar alltså vilka svar du får.</p>
+          </div>
+          <div class="dock">
+            <p class="context">Efter <q id="rate-context"></q></p>
+            <p class="readout" id="rate-readout" aria-live="off">Före efterträningen</p>
+            <p class="hint wide">Solfjädern före är uträknad av modellen. Förändringen är ett påhittat exempel, och därför står inga siffror i bilden.</p>
+            <details class="more">
+              <summary>Så här är det egentligen</summary>
+              <div class="panel">
+                <p>Modellen på den här sidan har inte gått igenom det här steget. Därför går förändringen inte att räkna fram här. Vilka bitar som växer och krymper i bilden har vi valt själva, för att visa principen.</p>
+                <p>Bilden förenklar. Betygen sätts på hela svar och inte på enskilda bitar. Ofta tränas först en hjälpmodell att förutsäga betygen, och den används sedan när språkmodellens tal ställs om. Metoden kallas på engelska reinforcement learning from human feedback, förkortat RLHF.</p>
+                <p>Det finns fler sätt att forma en chattbot. Den tränas på exempelsamtal som människor har skrivit, och tjänsten lägger ofta en dold instruktion före ditt samtal.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+        <p class="sr-only">Bildbeskrivning: en solfjäder i mitten av bilden. Tummar upp och tummar ner faller in mot några av bitarna. Bitar med tummen upp, som Ja och Självklart, växer utåt och blir ljusare. Bitar med tummen ner, som Nej, krymper. Förändringen är ett påhittat exempel.</p>
+      </div>
+    </section>
+
+    <!-- 9 -->
+    <section class="scene" id="steg-9" style="--len:3.8" data-in="1" aria-labelledby="h9">
+      <div class="hud">
+        <div class="stack">
+          <div class="sub">
+            <h2 id="h9"><span>9</span> Medhållet</h2>
+            <p class="line">Allt som står i frågan räknas med. Till vänster en fråga utan åsikt. Till höger samma fråga, men den som frågar säger först vad den själv tycker.</p>
+            <p class="line">Svaret lutar åt samma håll som frågan. Byt åsikt i frågan, så byter svaret sida.</p>
+            <p class="line">Hos chattbotar kallas det inställsamhet, på engelska sycophancy. Efterträningen kan förstärka den, eftersom människor ofta ger högre betyg åt svar som håller med dem.</p>
+            <p class="line">Medhåll från en chattbot visar alltså inte att du har rätt. Prova att ställa frågan utan att säga vad du själv tycker.</p>
+          </div>
+          <div class="dock">
+            <div class="chips" id="lean-topics" role="group" aria-label="Välj ämne"></div>
+            <fieldset class="seg">
+              <legend>Den som frågar tycker</legend>
+              <label><input type="radio" name="lean" value="for" checked><span>jättebra idé</span></label>
+              <label><input type="radio" name="lean" value="against"><span>jättedålig idé</span></label>
+            </fieldset>
+            <p class="context">Svaret börjar <q id="lean-context"></q></p>
+            <form id="lean-form" autocomplete="off">
+              <label for="lean-input">Eget ämne</label>
+              <div class="inputrow">
+                <input id="lean-input" type="text" maxlength="40" placeholder="till exempel sommartid" spellcheck="false">
+                <button type="submit">Räkna</button>
+              </div>
+            </form>
+            <p class="hint wide" id="lean-msg" aria-live="polite" hidden></p>
+            <p class="hint wide" id="lean-note" hidden>Ordet jättedålig klyvs i två bitar. <em>jätted</em> är den första.</p>
+            <details class="more figures">
+              <summary>Visa som lista</summary>
+              <div class="panel">
+                <table class="filtable">
+                  <caption>De fem mest sannolika nästa bitarna i svaret</caption>
+                  <thead><tr><th scope="col">Frågan</th><th scope="col">Svaret börjar</th><th scope="col">De fem mest sannolika</th></tr></thead>
+                  <tbody id="lean-table"></tbody>
+                </table>
+                <p class="note">Ordet jättedålig klyvs i två bitar. Den första är <em>jätted</em>.</p>
+              </div>
+            </details>
+            <details class="more">
+              <summary>Så här är det egentligen</summary>
+              <div class="panel">
+                <p>Modellen på den här sidan har inga betyg bakom sig. Här beror lutningen på att texten före väger tungt i uträkningen. Till stor del upprepar modellen ordet som nyss stod i frågan. När vi provade frågor där svaret inte kunde upprepa ett ord blev lutningen svag.</p>
+                <p>Inställsamhet hos en chattbot är mer än upprepning. Den kan visa sig som beröm, som att svaret ändras när du säger emot, eller som en säker ton i ett osäkert svar. Forskare har mätt sådant hos flera stora chattbotar.</p>
+                <p>Den lilla modellen ger inget svar i egentlig mening. Den fortsätter en text som ser ut som ett samtal.</p>
+              </div>
+            </details>
+          </div>
+        </div>
+        <p class="sr-only">Bildbeskrivning: två solfjädrar bredvid varandra. Över den vänstra står en fråga utan åsikt, över den högra samma fråga med en åsikt först. I den högra sticker en enda bit ut långt, och det är samma ord som stod i frågan. Siffrorna finns under Visa som lista.</p>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="scene" id="steg-10" style="--len:3" data-in="1.2" aria-labelledby="h10">
       <div class="hud">
         <div class="stack">
           <p id="hallu-text" class="out hallu" aria-live="polite"></p>
           <div class="sub">
-            <h2 id="h7"><span>7</span> Hallucinationen</h2>
+            <h2 id="h10"><span>10</span> Hallucinationen</h2>
             <p class="line">Det finns inget Nobelpris i bibliotekskunskap. Modellen fortsätter meningen ändå, lika flytande som annars.</p>
             <p class="line">Strecket under varje bit visar hur sannolik den var när den valdes. Inget steg i uträkningen kontrollerar om det som står är sant.</p>
           </div>
@@ -309,8 +439,8 @@
       </div>
     </section>
 
-    <!-- 8 -->
-    <section class="scene" id="steg-8" style="--len:3.5" data-in="1.1" aria-labelledby="h8">
+    <!-- 11 -->
+    <section class="scene" id="steg-11" style="--len:3.5" data-in="1.1" aria-labelledby="h11">
       <div class="hud">
         <div class="closing">
           <div class="stack">
@@ -320,12 +450,13 @@
           </div>
         </div>
         <div class="outro">
-          <h2 id="h8">Vad betyder det för dig?</h2>
-          <p>Du har följt en mening in i en liten modell: den klövs i bitar, talen räknades om i tolv lager och nästa bit drogs med slumpens hjälp. ChatGPT och andra chattbotar är mycket större, men de bygger på samma princip. Ta med dig fyra frågor.</p>
+          <h2 id="h11">Vad betyder det för dig?</h2>
+          <p>Du har följt en mening in i en liten modell: den klövs i bitar, talen räknades om i tolv lager och nästa bit drogs med slumpens hjälp. Du har också sett att sannolikheterna bär med sig mönster ur träningstexten, och att de flyttar sig efter det du själv skriver. ChatGPT och andra chattbotar är mycket större, men de bygger på samma princip. Ta med dig fem frågor.</p>
           <ul class="questions">
             <li><strong>Låter svaret säkert, eller är det säkert?</strong> En text som flyter är inte därför sann.</li>
             <li><strong>Går uppgiften att hitta i en annan källa?</strong> Be om källan och kontrollera att den finns och säger det som påstås.</li>
             <li><strong>Skulle jag få samma svar en gång till?</strong> Slumpen är med i varje svar.</li>
+            <li><strong>Vad stod i min egen fråga?</strong> Svaret lutar åt det håll frågan lutar, och medhåll är inget bevis.</li>
             <li><strong>Vad händer om svaret är fel?</strong> Ju mer som står på spel, desto viktigare är kontrollen.</li>
           </ul>
           <p class="outrolinks"><a class="button" href="https://aifolkbildaren.se">Till AI-Folkbildaren</a> <a class="textlink" href="#steg-0">Börja om med en ny mening</a></p>

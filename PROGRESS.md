@@ -1,6 +1,6 @@
 # Status
 
-Senast uppdaterad 2026-11-15 (mobilkraschen).
+Senast uppdaterad 2026-11-15 (tre nya scener: skevheten, efterträningen och medhållet).
 
 ## Klart
 
@@ -35,7 +35,26 @@ Senast uppdaterad 2026-11-15 (mobilkraschen).
   - Uppmätt toppminne för hela sidan i Chromium: dator 1,8 GB (förut 2,2 GB plus sidan). Mobilläge (emulerad iPhone): 1,2 GB vid start från cachen och 1,4 GB vid första nedladdningen. Fart på dator i WebAssembly: 88 ms per ny bit i vanligt läge och 170–200 ms i snålt läge.
   - **Inte provat**: en riktig iPhone. Apple anger ingen fast minnesgräns för en flik i Safari eller Chrome på iPhone.
 
+- **Tre nya scener är valda och provkörda** (2026-11-15). De är byggda, se nästa punkt. Vidar vill ha med skevhet (bias), efterträning med mänskliga betyg och inställsamhet (sycophancy). Han valde ett koncept per scen. De står i `docs/PLAN.md` under "Tillägg 2026-11-15". Idéerna till de två levande scenerna är provkörda mot modellen med `scripts/prova_skevhet.py`. Siffrorna är sannolikheten för nästa bit, i procent:
+  - **Två solfjädrar (yrke och pronomen)**, efter "... berättade att": Undersköterskan hon 19,6 och han 3,0. Barnmorskan hon 18,9 och han 1,8. Förskolläraren hon 17,4 och han 4,6. Sjuksköterskan hon 13,8 och han 2,7. Lastbilschauffören han 37,0 och hon 3,5. Ingenjören han 27,8 och hon 4,6. Snickaren han 19,0 och hon 4,7. Mönstret är detsamma efter "... sa att". Läraren, Läkaren och Professorn ligger nästan jämnt. Bibliotekarien ger han 15,0 och hon 8,8.
+  - **Den lutade solfjädern.** Frågan "– Vad tycker du om skoluniform?" följd av "– Jag tycker att skoluniform är en" ger "bra" 21,9. Om frågan i stället börjar med "Jag tycker att skoluniform är en jättebra idé" blir "jättebra" 92,8. Börjar den med "jättedålig idé" blir "jätted" (början på jättedålig) 63,5. Samma mönster för kärnkraft, elsparkcyklar, den nya bron och filmen (lutat svar mellan 50 och 95).
+  - **Ett upplägg som inte fungerade:** "Fråga: ... Svar:" med Ja eller Nej. Skillnaderna var små och gick åt olika håll.
+  - Efter "– Jag håller" är "med" den mest sannolika fortsättningen i alla tre versionerna (47 till 68), mot 4 till 12 för "inte".
+
+- **De tre scenerna är byggda** (2026-11-15). Sidan har nu tolv scener, numrerade 0 till 11. De nya ligger efter slumpen: 7 Skevheten, 8 Efterträningen och 9 Medhållet. Hallucinationen är nummer 10 och slutscenen nummer 11.
+  - **7 Skevheten:** två solfjädrar bredvid varandra för "X berättade att", med *hon* och *han* utmärkta. Fyra färdiga par, och ett eget ord till vänster när modellen är startad.
+  - **8 Efterträningen:** solfjädern efter "– Kan du hjälpa mig att skriva ett brev?" är uträknad. När man scrollar faller tummar in, och bitarna Ja, Absolut, Självklart, Javisst och Gärna växer medan Nej, Varför, Inte och Aldrig krymper. Förändringen är påhittad (`RATE_UP`, `RATE_DOWN` och `RATE_STRENGTH` i `src/main.js`). Därför visas inga siffror i den scenen, och det står i bilden och i rutan.
+  - **9 Medhållet:** vänster solfjäder är frågan utan åsikt, höger är samma fråga med åsikt. Ett reglage byter mellan "jättebra idé" och "jättedålig idé". Tre färdiga ämnen, och ett eget ämne när modellen är startad.
+  - **Slutscenen** har fått en femte fråga: "Vad stod i min egen fråga?"
+  - **Teknik:** den andra solfjädern ritas med egna punkter (`sidePoints` i `src/scene/stage.js`), eftersom de 64 000 partiklarna redan används av den första. Varje solfjäderscen har en egen form (`fan`, `bias`, `rate`, `lean`). De färdiga exemplen räknas fram med `scripts/precompute_extra.py`, som kör samma ONNX-fil som sidan. Filerna är `public/data/extra.json`, `extra_ids.bin` och `extra_probs.bin` (445 kB tillsammans). De innehåller de 4 096 mest sannolika bitarna per mening, vilket täcker minst 93 procent av sannolikheten. Resten fördelas jämnt på övriga bitar.
+  - **Provat** i en webbläsare utan grafikkort, i 1280 × 720 och i mobilbredd, utan fel i konsolen. Med modellen startad lokalt (WebAssembly) gav ett eget ord (Brandmannen: han 36 procent, hon 3,0) och ett eget ämne (sommartid) resultat, och den levande uträkningen av "Sjuksköterskan berättade att" gav samma siffror som det färdiga exemplet.
+  - **Inte provat:** riktig dator med grafikkort, skärmläsare, minskad rörelse i de nya scenerna.
+  - **Känt fel i mobilbredd:** meningarna över de två solfjädrarna hamnar fel (den övre bakom sidhuvudet, den nedre över solfjädern).
+  - **Lutningen utan upprepning är svag.** Med "Jag har alltid gillat X" eller "Jag är emot X" i frågan, och svaret "Jag tycker att X är", ändrades sannolikheterna bara några procentenheter. Scenen bygger därför på upprepning, och rutan säger det.
+
 ## Nästa steg
+
+00. **Vidar tittar på de tre nya scenerna** och säger vad som känns rätt och fel. Därefter research och källor till påståendena i scen 8 och 9 (se "Att kontrollera").
 
 0. **Vidar provar på sin iPhone** (PR:en med mobilrättningen). Sidan ska alltid gå att öppna. Tryck sedan på knappen och se om modellen startar eller om det lugna meddelandet visas.
 1. **Texter (steg 5).** Utkasten gäller tills vidare. Vidar redigerar dem senare med Opus.
@@ -70,12 +89,24 @@ Senast uppdaterad 2026-11-15 (mobilkraschen).
 - Slutraden "Någon hjärna fanns det inte, bara en uträkning" är en formulering att ta ställning till.
 - Ny mening i scen 5 (2026-11-15): "Den mest sannolika nästa biten står i mitten och sticker ut längst. Ju längre åt sidorna, desto kortare, mörkare och mindre sannolik." Den ersätter "Ju ljusare och längre ut", som kunde läsas som längre ut åt sidorna. Stämmer med `buildFan` i `src/scene/shapes.js`.
 
+- Nya påståenden i scen 7 till 9, skrivna utan att källor har lästs (Vidar: research görs i efterhand):
+  - Scen 8: "I en vanlig metod får människor sätta betyg på svar. Sedan ställs modellens tal om." I rutan: att en hjälpmodell ofta tränas att förutsäga betygen (RLHF), att chattbotar tränas på exempelsamtal och att tjänster lägger en dold instruktion före samtalet.
+  - Scen 9: "Efterträningen kan förstärka den, eftersom människor ofta ger högre betyg åt svar som håller med dem." I rutan: att inställsamhet kan visa sig som beröm, som ändrade svar när man säger emot och som säker ton, och att "forskare har mätt sådant hos flera stora chattbotar".
+  - Scen 7: "Modellens tal har ställts in av träningstexten och inget annat, men mönstret kan vara både starkare och svagare i modellen än i texten."
+  - Rubriken "Medhållet" och ordet "inställsamhet" som svensk term för sycophancy är mina val.
+
 ## Öppna frågor
+
+- **Källor till scenerna om efterträning och inställsamhet.** Inget påstående om hur chattbotar efterträningen går till eller varför de ger medhåll får stå på sidan utan källa. Att slå upp och läsa innan texterna skrivs: forskningen om inställsamhet hos språkmodeller (bland annat Anthropics studie från 2023, "Towards Understanding Sycophancy in Language Models") och en beskrivning av träning med mänskliga betyg (RLHF). Inte läst i den här sessionen.
+- **Räcker upprepning som bild av inställsamhet?** Provat: utan ord att upprepa blir lutningen svag i den här modellen. Scenen visar därför upprepning och säger det i rutan. Frågan är om det är tillräckligt nära det besökaren möter i en chattbot.
+- **Scenen om efterträning visar en påhittad förändring.** Det står tydligt, men det är sidans enda bild som inte är uträknad. Är det godtagbart?
+- **Vilka yrken ska vara färdiga exempel i 7a?** Sjuksköterskan mot Ingenjören är tydligast. Bibliotekarien ger "han" oftare än "hon", vilket kan vara en bra överraskning för målgruppen, men vi vet inte varför.
+- **Fri text i 7a och 7c** kan ge stötande resultat. Samma avvägning som för övrig fri text, och visningsläget `?visning` bör bara ha färdiga exempel.
 
 - **Kan modellen alls köras på en iPhone?** Osäkert. Även i snålt läge behöver den drygt 1 GB, och det är inte provat på en riktig telefon. Vidar provar. Om det inte går finns tre förslag: (a) mobilen visar bara de färdiga exemplen, och knappen ersätts av en mening om att den levande modellen kräver en dator; (b) fler färdiga meningar, så att mobilen får mer att välja på; (c) en mindre modellfil för mobil, till exempel 8-bitarsvikter med MatMulNBits. Förslag c måste kontrolleras mot originalet, eftersom den 8-bitarsvariant som provades tidigare bara gav samma toppval i 65 procent av positionerna.
 - **Cachen på iPhone.** Koden flödar filen direkt till webbläsarens cache. Om Safari på iPhone inte klarar det, hämtar koden filen en gång till utan cache, och då laddas 259 MB ner två gånger. Inte provat.
 
-- **Tempot i resan.** Hela sidan är ungefär 30 skärmhöjder att scrolla. Längden per scen står som `--len` i `index.html` och är lätt att ändra.
+- **Tempot i resan.** Hela sidan är ungefär 41 skärmhöjder att scrolla (30 före de tre nya scenerna). Längden per scen står som `--len` i `index.html` och är lätt att ändra.
 - **Prestanda på svag dator.** Punkter nära kameran ritas stora, och det kostar mer än förut. Inte mätt på riktig hårdvara.
 
 - **Nedladdningen på 259 MB.** På dator hämtas modellen automatiskt, på mobil och i datasparläge först när besökaren trycker på knappen (på mobil även när den redan är sparad). Är det rätt avvägning?

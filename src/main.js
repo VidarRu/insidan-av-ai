@@ -61,6 +61,7 @@ const scenes = [...document.querySelectorAll('.scene')];
 const navLinks = [...document.querySelectorAll('.steps a')];
 const sceneLines = scenes.map((s) => [...s.querySelectorAll('.line')]);
 const clamp01 = (x) => Math.max(0, Math.min(1, x));
+const LAST_STEP = scenes.length - 1, RATE_STEP = 8, HALLU_STEP = 10;
 let currentStep = -1, currentLine = -1, scrollPos = window.scrollY;
 
 function sceneRange(i) {
@@ -115,7 +116,7 @@ function updateProgress(dt) {
     currentStep = step; currentLine = -1;
     scenes.forEach((s, i) => s.classList.toggle('on', i === step));
     navLinks.forEach((a, i) => { if (i === step) a.setAttribute('aria-current', 'step'); else a.removeAttribute('aria-current'); });
-    $('#yours').hidden = step === 0 || step === 8;
+    $('#yours').hidden = step === 0 || step === LAST_STEP;
     if (state.data) onStep();
   }
   if (line !== currentLine) {
@@ -126,7 +127,8 @@ function updateProgress(dt) {
   document.body.classList.toggle('travel', at.t > 0.12 && at.t < 0.62);
   if (step === 4) updateFilReadout();
   // I slutscenen visas först bilden med en rad text, sedan frågorna
-  scenes[8].classList.toggle('late', step === 8 && (q > 0.45 || stage.reduced));
+  if (step === RATE_STEP) setRateAmount(q);
+  scenes[LAST_STEP].classList.toggle('late', step === LAST_STEP && (q > 0.45 || stage.reduced));
 }
 
 let last = performance.now();
@@ -261,6 +263,7 @@ if (SHOW_MODE) {
   $('#sentence-form button').hidden = true;
   $('#sentence-note').textContent = 'Visningsläge: välj en av de färdiga meningarna.';
   $('#hallu-input').readOnly = true;
+  $('#bias-form').hidden = true; $('#lean-form').hidden = true;
 }
 
 // ---------- Steg 2: bitar ----------
@@ -525,11 +528,171 @@ async function runHallu() {
 }
 $('#hallu-form').addEventListener('submit', (e) => { e.preventDefault(); runHallu(); });
 
+// ---------- Steg 7 till 9: skevheten, efterträningen och medhållet ----------
+// De färdiga exemplen är sparade som de 4 096 mest sannolika bitarna per mening.
+// Resten av sannolikheten fördelas jämnt på de övriga bitarna.
+function presetProbs(row) {
+  const { extra, extraIds, extraProbs, vocab } = state.data, K = extra.k, n = vocab.length;
+  let sum = 0;
+  for (let j = 0; j < K; j++) sum += extraProbs[row * K + j];
+  const p = new Float64Array(n).fill(Math.max(0, 1 - sum) / (n - K));
+  for (let j = 0; j < K; j++) p[extraIds[row * K + j]] = extraProbs[row * K + j];
+  return p;
+}
+async function liveProbs(text) { return softmax((await model.next(text, { k: 1 })).logits, 1); }
+const topWords = (probs, k = 5) => topIndices(probs, k).map((id) => `${esc(pieceText(state.data.vocab[id]))} ${fmtPct(probs[id])}`).join(', ');
+const quoteHtml = (text) => esc(text).replace(/\n/g, '<br>');
+// Etiketter vid en solfjäder: de mest sannolika bitarna, och de som ska lyftas fram
+function fanLabels(probs, getPos, { k = 5, highlight = [], pct = true, mark = () => '' } = {}) {
+  const { vocab } = state.data;
+  const ids = topIndices(probs, k);
+  for (const id of highlight) if (!ids.includes(id)) ids.push(id);
+  return ids.map((id, r) => ({
+    html: `<b>${esc(pieceText(vocab[id]))}</b>${pct ? `<small>${fmtPct(probs[id])}</small>` : ''}${mark(id)}`,
+    cls: highlight.includes(id) ? 'hl' : r === 0 ? 'top1' : '', getPos: () => getPos(id), dy: -4,
+  }));
+}
+// Meningen står över sin solfjäder
+function caption(name, side, html) {
+  const [x, y] = stage.fanOffset(name, side);
+  return { html, cls: 'cap', getPos: () => stage.fanPosition(0, 'fan').set(x, y + 1.32, stage.fanPosition(0, 'fan').z) };
+}
+function chip(text, pressed, onClick) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = text; b.setAttribute('aria-pressed', String(pressed));
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+// Steg 7: två yrken, samma mening
+const bias = { pair: 0, left: null, right: null }; // left och right: { word, text, probs }
+function biasEntry(word) {
+  const w = state.data.extra.bias.words[word];
+  return { word, text: w.text, probs: presetProbs(w.row) };
+}
+function renderBias(animate = true) {
+  const { extra, vocabIndex } = state.data;
+  const hon = vocabIndex.get('▁hon'), han = vocabIndex.get('▁han');
+  $('#bias-pairs').replaceChildren(...extra.bias.pairs.map(([a, b], i) =>
+    chip(`${a} och ${b}`, bias.pair === i, () => { bias.pair = i; bias.left = biasEntry(a); bias.right = biasEntry(b); $('#bias-msg').hidden = true; renderBias(); })));
+  stage.setProbabilities(bias.left.probs, animate, 'bias');
+  stage.setSideProbabilities('bias', bias.right.probs, animate);
+  stage.setLabels('bias.a', fanLabels(bias.left.probs, (id) => stage.fanPosition(id, 'bias'), { highlight: [hon, han] }));
+  stage.setLabels('bias.b', fanLabels(bias.right.probs, (id) => stage.sidePosition(id, 'bias'), { highlight: [hon, han] }));
+  stage.setLabels('bias.cap', [bias.left, bias.right].map((e, i) => caption('bias', i ? 1 : -1, `${esc(e.text)} …`)));
+  $('#bias-table').innerHTML = [bias.left, bias.right].map((e) =>
+    `<tr><th scope="row">${esc(e.text)}</th><td>${fmtPct(e.probs[hon])}</td><td>${fmtPct(e.probs[han])}</td><td>${topWords(e.probs)}</td></tr>`).join('');
+}
+$('#bias-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = $('#bias-msg');
+  let word = $('#bias-input').value.trim().replace(/\s+/g, ' ');
+  if (!word) return;
+  if (!state.modelReady) { msg.textContent = 'Egna ord kräver att modellen är startad. Välj ett av de färdiga paren så länge.'; msg.hidden = false; return; }
+  word = word[0].toUpperCase() + word.slice(1);
+  const text = state.data.extra.bias.template.replace('{}', word);
+  msg.textContent = 'Räknar …'; msg.hidden = false;
+  try {
+    bias.left = { word, text, probs: await liveProbs(text) };
+    bias.pair = -1; msg.hidden = true;
+    renderBias();
+  } catch { msg.textContent = 'Det gick inte att räkna just nu.'; }
+});
+
+// Steg 8: efterträningen. Solfjädern före är uträknad. Förändringen är ett
+// påhittat exempel: några bitar får tummen upp och några tummen ner, och deras
+// sannolikheter flyttas i takt med scrollen. Inga siffror visas.
+const RATE_UP = ['Ja', 'Absolut', 'Självklart', 'Javisst', 'Gärna'], RATE_DOWN = ['Nej', 'Varför', 'Inte', 'Aldrig'];
+const RATE_STRENGTH = 3.5; // hur mycket en tumme flyttar en bit vid full förändring (i logit-enheter)
+const rate = { base: null, up: [], down: [], amount: -1 };
+function setRateAmount(q) {
+  if (!rate.base) return;
+  const amount = Math.round(clamp01((q - 0.22) / 0.56) * 8) / 8;
+  if (amount === rate.amount) return;
+  const first = rate.amount < 0;
+  rate.amount = amount;
+  const p = Float64Array.from(rate.base);
+  for (const id of rate.up) p[id] *= Math.exp(RATE_STRENGTH * amount);
+  for (const id of rate.down) p[id] *= Math.exp(-RATE_STRENGTH * amount);
+  let sum = 0; for (let i = 0; i < p.length; i++) sum += p[i];
+  for (let i = 0; i < p.length; i++) p[i] /= sum;
+  stage.setProbabilities(p, !first, 'rate');
+  const rated = [...rate.up, ...rate.down];
+  const thumb = (id) => (rate.up.includes(id) ? '<span class="th">👍</span>' : rate.down.includes(id) ? '<span class="th">👎</span>' : '');
+  stage.setLabels('rate.words', fanLabels(p, (id) => stage.fanPosition(id, 'rate'), { k: 7, highlight: rated.filter((id) => p[id] > 0.004), pct: false, mark: thumb }));
+  // Tummar som faller in mot de betygsatta bitarna medan solfjädern formas om
+  const falling = amount > 0 && amount < 1;
+  stage.setLabels('rate.rain', !falling ? [] : rated.flatMap((id, i) => [0, 0.5].map((phase) => {
+    const f = () => (stage.time * 0.2 + i * 0.37 + phase) % 1;
+    return { html: rate.up.includes(id) ? '👍' : '👎', cls: 'thumb', vis: () => Math.sin(Math.PI * f()),
+      getPos: () => { const v = stage.fanPosition(id, 'rate'), k = 1 - f(); v.y += 1.6 * k; v.x += 0.5 * k * Math.sin(i * 2.1); return v; } };
+  })));
+  $('#rate-readout').textContent = amount === 0 ? 'Före efterträningen' : amount === 1 ? 'Efter efterträningen (påhittat exempel)' : 'Betygen kommer in …';
+}
+
+// Steg 9: samma fråga utan åsikt och med åsikt
+const tilt = { topic: 0, side: 'for', entries: null }; // entries: { name, neutral, for, against } med { text, probs }
+function leanPreset(i) {
+  const t = state.data.extra.lean.topics[i];
+  const e = { name: t.name };
+  for (const k of ['neutral', 'for', 'against']) e[k] = { text: t[k].text, probs: presetProbs(t[k].row) };
+  return e;
+}
+function renderLean(animate = true) {
+  const { extra } = state.data, e = tilt.entries, right = e[tilt.side];
+  $('#lean-topics').replaceChildren(...extra.lean.topics.map((t, i) =>
+    chip(t.name, tilt.topic === i, () => { tilt.topic = i; tilt.entries = leanPreset(i); $('#lean-msg').hidden = true; renderLean(); })));
+  stage.setProbabilities(e.neutral.probs, animate, 'lean');
+  stage.setSideProbabilities('lean', right.probs, animate);
+  stage.setLabels('lean.a', fanLabels(e.neutral.probs, (id) => stage.fanPosition(id, 'lean')));
+  stage.setLabels('lean.b', fanLabels(right.probs, (id) => stage.sidePosition(id, 'lean')));
+  stage.setLabels('lean.cap', [e.neutral, right].map((x, i) => caption('lean', i ? 1 : -1, esc(x.text.split('\n')[0]))));
+  $('#lean-context').textContent = e.neutral.text.split('\n')[1];
+  $('#lean-note').hidden = tilt.side !== 'against';
+  const names = { neutral: 'Utan åsikt', for: 'Med åsikten jättebra idé', against: 'Med åsikten jättedålig idé' };
+  $('#lean-table').innerHTML = ['neutral', 'for', 'against'].map((k) => {
+    const [q, a] = e[k].text.split('\n');
+    return `<tr><th scope="row">${names[k]}<br><small>${esc(q)}</small></th><td>${esc(a)} …</td><td>${topWords(e[k].probs)}</td></tr>`;
+  }).join('');
+}
+document.querySelectorAll('input[name="lean"]').forEach((r) => r.addEventListener('change', () => { tilt.side = r.value; renderLean(); }));
+$('#lean-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = $('#lean-msg');
+  const name = $('#lean-input').value.trim().replace(/\s+/g, ' ');
+  if (!name) return;
+  if (!state.modelReady) { msg.textContent = 'Egna ämnen kräver att modellen är startad. Välj ett av de färdiga ämnena så länge.'; msg.hidden = false; return; }
+  msg.textContent = 'Räknar tre frågor …'; msg.hidden = false;
+  try {
+    const entries = { name };
+    for (const [k, t] of Object.entries(state.data.extra.lean.templates)) {
+      const text = t.replaceAll('{0}', name);
+      entries[k] = { text, probs: await liveProbs(text) };
+    }
+    tilt.entries = entries; tilt.topic = -1; msg.hidden = true;
+    renderLean();
+  } catch { msg.textContent = 'Det gick inte att räkna just nu.'; }
+});
+
+function initExtra() {
+  const { extra, vocabIndex } = state.data;
+  const [a, b] = extra.bias.pairs[0];
+  bias.left = biasEntry(a); bias.right = biasEntry(b);
+  renderBias(false);
+  rate.base = presetProbs(extra.rate.row);
+  const ids = (words) => words.map((w) => vocabIndex.get('▁' + w)).filter((id) => id !== undefined);
+  rate.up = ids(RATE_UP); rate.down = ids(RATE_DOWN);
+  $('#rate-context').innerHTML = quoteHtml(extra.rate.text);
+  setRateAmount(0);
+  tilt.entries = leanPreset(0);
+  renderLean(false);
+}
+
 // När en scen kommer in i bild
 let halluShown = false;
 function onStep() {
   updateFan();
-  if (currentStep === 7 && !halluShown) { halluShown = true; runHallu(); }
+  if (currentStep === HALLU_STEP && !halluShown) { halluShown = true; runHallu(); }
 }
 
 // ---------- Start ----------
@@ -538,9 +701,10 @@ async function loadData() {
   const get = (name) => fetch(`/data/${name}`).then((r) => { if (!r.ok) throw new Error(`/data/${name} saknas (${r.status})`); return r; });
   const bin = (name) => get(name).then((r) => r.arrayBuffer());
   const json = (name) => get(name).then((r) => r.json());
-  const [vocab, galaxy, words, neighbors, neighborsSim, examples, exLogits, fil] = await Promise.all([
+  const [vocab, galaxy, words, neighbors, neighborsSim, examples, exLogits, fil, extra, extraIds, extraProbs] = await Promise.all([
     json('vocab.json'), bin('galaxy.bin'), bin('words.bin'), bin('neighbors.bin'), bin('neighbors_sim.bin'),
     json('examples.json'), bin('examples_logits.bin'), json('fil.json'),
+    json('extra.json'), bin('extra_ids.bin'), bin('extra_probs.bin'),
   ]);
   const wordsArr = new Uint16Array(words);
   const all = float16ToFloat32(new Uint16Array(exLogits));
@@ -550,6 +714,7 @@ async function loadData() {
     galaxy: new Int16Array(galaxy), words: wordsArr, wordRow: new Map(Array.from(wordsArr, (id, row) => [id, row])),
     neighbors: new Uint16Array(neighbors), neighborsSim: new Uint8Array(neighborsSim),
     examples, fil,
+    extra, extraIds: new Uint16Array(extraIds), extraProbs: new Float32Array(extraProbs),
     presetLogits: Array.from({ length: rows }, (_, r) => all.subarray(r * vocab.length, (r + 1) * vocab.length)),
   };
 }
@@ -560,11 +725,12 @@ async function init() {
   state.data = await loadData();
   stage.setGalaxy(state.data.galaxy);
   renderFil();
+  initExtra();
   await setSentence(state.text);
   halluStart($('#hallu-input').value);
   onStep();
-  const m = /^#steg-(\d)$/.exec(location.hash);
-  if (m) goTo(Number(m[1]), false);
+  const m = /^#steg-(\d+)$/.exec(location.hash);
+  if (m && Number(m[1]) <= LAST_STEP) goTo(Number(m[1]), false);
   window.__ready = true;
 
   // Tokeniseraren är liten och laddas alltid. Då klyvs också egen text direkt.
