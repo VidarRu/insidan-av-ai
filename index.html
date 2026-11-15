@@ -21,7 +21,9 @@
       <span class="dot" aria-hidden="true"></span><span id="model-status-text">Visar färdiga exempel</span>
     </p>
     <button id="load-model" class="ghost" hidden>Starta modellen (259 MB)</button>
+    <button id="reset-view" class="ghost" hidden>Återställ vyn</button>
     <button id="pause" class="ghost" aria-pressed="false">Pausa rörelse</button>
+    <button id="fullscreen" class="ghost" aria-pressed="false">Helskärm</button>
     <p id="model-note" class="model-note" hidden><span id="model-note-text"></span> <button type="button" id="model-note-close" class="link-button">Stäng</button></p>
   </header>
 
@@ -75,7 +77,7 @@
     </section>
 
     <!-- 1 -->
-    <section class="scene" id="steg-1" style="--len:3.9" data-in="1.7" aria-labelledby="h1">
+    <section class="scene" id="steg-1" style="--len:4.8" data-in="1.7" aria-labelledby="h1">
       <div class="hud">
         <div class="stack">
           <div class="sub">
@@ -83,8 +85,10 @@
             <p class="line">Här inne finns ingen hjärna.</p>
             <p class="line">Här finns 64 000 ljuspunkter. Varje punkt är en bit text som modellen räknar med.</p>
             <p class="line">Några av dem lyser orange. De är bitarna i din mening.</p>
+            <p class="line">Nu följer vi din mening genom uträkningen. Först klyvs den i bitar, sedan räknas bitarnas tal om i tolv lager, och sist blir det en sannolikhet för nästa bit.</p>
           </div>
           <div class="dock">
+            <p class="hint">Dra i bilden, eller tryck ← och →, för att se den från ett annat håll.</p>
             <details class="more">
               <summary>Så här är det egentligen</summary>
               <div class="panel">
@@ -100,7 +104,7 @@
     </section>
 
     <!-- 2 -->
-    <section class="scene" id="steg-2" style="--len:4.2" aria-labelledby="h2">
+    <section class="scene" id="steg-2" style="--len:5" aria-labelledby="h2">
       <div class="hud">
         <div class="stack">
           <div class="out tokenbox" aria-live="polite">
@@ -109,7 +113,8 @@
           </div>
           <div class="sub">
             <h2 id="h2"><span>2</span> Bitar, inte ord</h2>
-            <p class="line">Modellen räknar inte med ord. Först klyvs texten i bitar, som kallas tokens.</p>
+            <p class="line">Vi börjar med det du skrev. För dig är det en mening. Modellen räknar inte med meningar, och inte heller med ord.</p>
+            <p class="line">Först klyvs texten i bitar, som kallas tokens. Här ovanför står din mening kluven.</p>
             <p class="line">Vanliga ord blir en bit. Ovanliga ord klyvs i flera.</p>
             <p class="line">Varje bit har en egen punkt i rummet. Linjen går från bit till bit genom din mening.</p>
           </div>
@@ -139,12 +144,13 @@
     </section>
 
     <!-- 3 -->
-    <section class="scene" id="steg-3" style="--len:3.2" aria-labelledby="h3">
+    <section class="scene" id="steg-3" style="--len:4.2" aria-labelledby="h3">
       <div class="hud">
         <div class="stack">
           <div class="sub">
             <h2 id="h3"><span>3</span> Betydelserummet</h2>
-            <p class="line">Bitar som brukar stå i liknande sammanhang ligger nära varandra.</p>
+            <p class="line">Nu är din mening en rad punkter i rummet. Men varför ligger en bit just där den ligger?</p>
+            <p class="line">Platserna ställdes in när modellen tränades. Bitar som brukar stå i liknande sammanhang hamnade nära varandra.</p>
             <p class="line">Sök ett ord, så åker vi dit och ser vilka som ligger närmast.</p>
             <p class="line">Sök på <em>glad</em>. Bland grannarna finns <em>ledsen</em>. Nära betyder alltså inte samma betydelse, utan att orden används på liknande sätt.</p>
           </div>
@@ -176,11 +182,12 @@
     </section>
 
     <!-- 4 -->
-    <section class="scene" id="steg-4" style="--len:5.6" data-in="1.3" aria-labelledby="h4">
+    <section class="scene" id="steg-4" style="--len:6.4" data-in="1.3" aria-labelledby="h4">
       <div class="hud">
         <div class="stack">
           <div class="sub">
             <h2 id="h4"><span>4</span> Sammanhanget</h2>
+            <p class="line">Platsen i rummet är bara början. En bit har samma plats vilken mening den än står i, och samma ord används på olika sätt i olika meningar.</p>
             <p class="line">Ett exempel: ordet <em>fil</em> kan vara mat, ett körfält eller något i datorn. I rummet har <em>fil</em> ändå bara en punkt.</p>
             <p class="line">Skillnaden uppstår i modellens tolv lager. I varje lager räknas talen för <em>fil</em> om med hjälp av bitarna före.</p>
             <p class="line">De tre trådarna är samma ord i tre meningar. Talen mellan dem visar hur lika de är. 1 betyder identiska.</p>
@@ -189,6 +196,7 @@
           <div class="dock">
             <div class="filpick" id="fil-pick" role="group" aria-label="Välj mening att följa"></div>
             <p class="readout" id="fil-readout" aria-live="off">Före första lagret</p>
+            <p class="hint">Dra i bilden åt sidan, eller tryck ← och →, så ser du lagren från sidan.</p>
             <details class="more figures">
               <summary>Visa siffrorna</summary>
               <div class="panel">
@@ -217,11 +225,12 @@
     </section>
 
     <!-- 5 -->
-    <section class="scene" id="steg-5" style="--len:3.4" data-in="1.2" aria-labelledby="h5">
+    <section class="scene" id="steg-5" style="--len:4.2" data-in="1.2" aria-labelledby="h5">
       <div class="hud">
         <div class="stack">
           <div class="sub">
             <h2 id="h5"><span>5</span> Nästa bit</h2>
+            <p class="line">Hittills har talen för din mening räknats om, lager för lager. Nu används de till det som modellen är tränad för: att räkna fram vad som kan komma härnäst.</p>
             <p class="line">Efter sista lagret räknar modellen fram en sannolikhet för var och en av de 64 000 bitarna.</p>
             <p class="line">Solfjädern visar alla på en gång. Den mest sannolika nästa biten står i mitten och sticker ut längst. Ju längre åt sidorna, desto kortare, mörkare och mindre sannolik.</p>
             <p class="line">Modellen slår inte upp något. Välj <em>Sveriges huvudstad är</em>. <em>Stockholm</em> får omkring 3 procent.</p>
@@ -251,12 +260,13 @@
     </section>
 
     <!-- 6 -->
-    <section class="scene" id="steg-6" style="--len:2.8" data-in="0.8" aria-labelledby="h6">
+    <section class="scene" id="steg-6" style="--len:3.6" data-in="0.8" aria-labelledby="h6">
       <div class="hud">
         <div class="stack">
           <ol id="runs" class="out runs" aria-live="polite" aria-label="Fortsättningar"></ol>
           <div class="sub">
             <h2 id="h6"><span>6</span> Slumpen</h2>
+            <p class="line">Solfjädern är ingen text ännu. Den är 64 000 sannolikheter. För att det ska bli text måste en enda bit väljas.</p>
             <p class="line">Modellen tar inte alltid den mest sannolika biten. Den drar en bit med slumpen, där sannolika bitar vinner oftare.</p>
             <p class="line">Sedan räknas allt om och nästa bit dras. Ändra temperaturen och fortsätt meningen några gånger.</p>
           </div>
@@ -281,12 +291,13 @@
     </section>
 
     <!-- 7 -->
-    <section class="scene" id="steg-7" style="--len:3.6" data-in="1" aria-labelledby="h7">
+    <section class="scene" id="steg-7" style="--len:4.4" data-in="1" aria-labelledby="h7">
       <div class="hud">
         <div class="stack">
           <div class="sub">
             <h2 id="h7"><span>7</span> Skevheten</h2>
-            <p class="line">Sannolikheterna kommer ur träningstexten. Mönster som finns i texten följer med, också de skeva.</p>
+            <p class="line">Så blir texten till, en bit i taget. Men varifrån kommer sannolikheterna?</p>
+            <p class="line">De kommer ur träningstexten. Mönster som finns i texten följer med, också de skeva.</p>
             <p class="line">Här står två solfjädrar bredvid varandra. Meningarna är lika. Bara yrket skiljer.</p>
             <p class="line">Jämför <em>hon</em> och <em>han</em> i de två solfjädrarna. Byt sedan yrken.</p>
             <p class="line">Ingen har skrivit in någon regel om yrken och kön. Talen har ställts in av texten.</p>
@@ -326,11 +337,12 @@
     </section>
 
     <!-- 8 -->
-    <section class="scene" id="steg-8" style="--len:3.6" data-in="1" aria-labelledby="h8">
+    <section class="scene" id="steg-8" style="--len:4.4" data-in="1" aria-labelledby="h8">
       <div class="hud">
         <div class="stack">
           <div class="sub">
             <h2 id="h8"><span>8</span> Efterträningen</h2>
+            <p class="line">Skevheten kom ur träningstexten. Men en chattbot formas av mer än texten.</p>
             <p class="line">Modellen på den här sidan är bara tränad att fortsätta text. En chattbot har tränats vidare efter det.</p>
             <p class="line">I en vanlig metod får människor sätta betyg på svar. Sedan ställs modellens tal om, så att svar som liknar de högt betygsatta blir mer sannolika.</p>
             <p class="line">Solfjädern formas om. Den visar inte längre bara vad som brukar stå i text, utan också vad människor har gett högt betyg.</p>
@@ -355,11 +367,12 @@
     </section>
 
     <!-- 9 -->
-    <section class="scene" id="steg-9" style="--len:3.8" data-in="1" aria-labelledby="h9">
+    <section class="scene" id="steg-9" style="--len:4.6" data-in="1" aria-labelledby="h9">
       <div class="hud">
         <div class="stack">
           <div class="sub">
             <h2 id="h9"><span>9</span> Medhållet</h2>
+            <p class="line">Träningstexten och betygen formar modellen i förväg. En sak till flyttar sannolikheterna, och den kommer från dig: det du själv skriver.</p>
             <p class="line">Allt som står i frågan räknas med. Till vänster en fråga utan åsikt. Till höger samma fråga, men den som frågar säger först vad den själv tycker.</p>
             <p class="line">Svaret lutar åt samma håll som frågan. Byt åsikt i frågan, så byter svaret sida.</p>
             <p class="line">Hos chattbotar kallas det inställsamhet, på engelska sycophancy. Efterträningen kan förstärka den, eftersom människor ofta ger högre betyg åt svar som håller med dem.</p>
@@ -408,14 +421,15 @@
     </section>
 
     <!-- 10 -->
-    <section class="scene" id="steg-10" style="--len:3" data-in="1.2" aria-labelledby="h10">
+    <section class="scene" id="steg-10" style="--len:3.8" data-in="1.2" aria-labelledby="h10">
       <div class="hud">
         <div class="stack">
           <p id="hallu-text" class="out hallu" aria-live="polite"></p>
           <div class="sub">
             <h2 id="h10"><span>10</span> Hallucinationen</h2>
+            <p class="line">Du har sett vad som flyttar sannolikheterna: träningstexten, betygen och din egen fråga. En sak finns inte med i uträkningen: en kontroll av om texten är sann.</p>
             <p class="line">Det finns inget Nobelpris i bibliotekskunskap. Modellen fortsätter meningen ändå, lika flytande som annars.</p>
-            <p class="line">Strecket under varje bit visar hur sannolik den var när den valdes. Inget steg i uträkningen kontrollerar om det som står är sant.</p>
+            <p class="line">Strecket under varje bit visar hur sannolik den var när den valdes. Hög sannolikhet betyder att biten brukar följa på en sådan text, inte att den stämmer.</p>
           </div>
           <div class="dock">
             <form id="hallu-form" autocomplete="off">

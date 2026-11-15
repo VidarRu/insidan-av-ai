@@ -24,7 +24,8 @@ body {
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
 
-#scene { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100lvh; display: block; z-index: 0; }
+#scene { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100lvh; display: block; z-index: 0; cursor: grab; touch-action: pan-y; }
+#scene.dragging { cursor: grabbing; }
 /* Mörkare kanter och botten, som i en biosalong: blicken dras mot mitten och undertexten går att läsa */
 .vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none;
   background: radial-gradient(ellipse 75% 70% at 50% 45%, transparent 55%, rgba(2, 3, 8, 0.6) 100%),
@@ -355,3 +356,10 @@ footer p { margin: 0 0 0.4rem; }
 #bias-table td, #lean-table td { font-size: 0.85rem; }
 .dock #bias-form, .dock #lean-form { flex-basis: 22rem; }
 @media (max-width: 820px) { .label.cap { font-size: 0.7rem; max-width: 80vw; } }
+
+/* Helskärm: överkanten och stegnavigeringen tonas ner tills man pekar på dem */
+@media (hover: hover) {
+  body.fullscreen .topbar, body.fullscreen .steps { opacity: 0.25; transition: opacity 0.3s; }
+  body.fullscreen .topbar:hover, body.fullscreen .topbar:focus-within,
+  body.fullscreen .steps:hover, body.fullscreen .steps:focus-within { opacity: 1; }
+}

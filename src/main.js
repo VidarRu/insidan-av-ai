@@ -105,11 +105,13 @@ function updateProgress(dt) {
   if (stage.reduced) {
     // Minskad rörelse: inga åkningar. Bilden byter mellan fasta lägen.
     if (at.t > 0) { if (at.t >= 0.5) { at.k++; at.qa = 0; } at.t = 0; }
-    at.qa = Math.round(at.qa * 3) / 3;
   }
+  // Texten följer den verkliga scrollen, även när bilden bara byter mellan fasta lägen
+  const rawQ = at.qa;
+  if (stage.reduced) at.qa = Math.round(at.qa * 3) / 3;
   Object.assign(stage, at);
   const step = at.t >= 0.5 ? at.k + 1 : at.k;
-  const q = at.t > 0 ? (step === at.k ? 1 : 0) : at.qa;
+  const q = at.t > 0 ? (step === at.k ? 1 : 0) : rawQ;
   const lines = sceneLines[step];
   const line = lines.length ? Math.min(lines.length - 1, Math.floor(q * lines.length)) : -1;
   if (step !== currentStep) {
@@ -117,6 +119,7 @@ function updateProgress(dt) {
     scenes.forEach((s, i) => s.classList.toggle('on', i === step));
     navLinks.forEach((a, i) => { if (i === step) a.setAttribute('aria-current', 'step'); else a.removeAttribute('aria-current'); });
     $('#yours').hidden = step === 0 || step === LAST_STEP;
+    stage.resetOrbit(); // en vriden vy hör till scenen där den vreds
     if (state.data) onStep();
   }
   if (line !== currentLine) {
@@ -128,7 +131,57 @@ function updateProgress(dt) {
   if (step === 4) updateFilReadout();
   // I slutscenen visas först bilden med en rad text, sedan frågorna
   if (step === RATE_STEP) setRateAmount(q);
+  if (stage.orbited !== !resetBtn.hidden) resetBtn.hidden = !stage.orbited;
+  // Kom ihåg var i resan vi är, så att platsen kan återställas när fönstret byter storlek
+  if (scenes[0].offsetHeight === anchor.h) {
+    let i = 0; const y = window.scrollY;
+    while (i < scenes.length - 1 && y >= scenes[i + 1].offsetTop) i++;
+    anchor.i = i; anchor.f = (y - scenes[i].offsetTop) / scenes[i].offsetHeight;
+  }
   scenes[LAST_STEP].classList.toggle('late', step === LAST_STEP && (q > 0.45 || stage.reduced));
+}
+
+// Scenernas längd räknas i skärmhöjder. När fönstret byter höjd (till exempel i
+// helskärm) flyttas scrollen så att besökaren står kvar på samma ställe i resan.
+const anchor = { i: 0, f: 0, h: scenes[0].offsetHeight };
+window.addEventListener('resize', () => {
+  const h = scenes[0].offsetHeight;
+  if (h === anchor.h) return;
+  anchor.h = h;
+  const s = scenes[anchor.i];
+  window.scrollTo({ top: s.offsetTop + anchor.f * s.offsetHeight, behavior: 'instant' });
+  scrollPos = window.scrollY;
+});
+
+// ---------- Vrida bilden och helskärm ----------
+const resetBtn = $('#reset-view');
+resetBtn.addEventListener('click', () => stage.resetOrbit());
+
+const fsBtn = $('#fullscreen'), root = document.documentElement;
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+const fsRequest = root.requestFullscreen || root.webkitRequestFullscreen;
+const fsExit = document.exitFullscreen || document.webkitExitFullscreen;
+function toggleFullscreen() {
+  try {
+    const p = fsElement() ? fsExit.call(document) : fsRequest.call(root);
+    if (p && p.catch) p.catch(() => {});
+  } catch {}
+}
+if (!fsRequest || !fsExit) fsBtn.hidden = true; // till exempel iPhone
+else {
+  fsBtn.addEventListener('click', toggleFullscreen);
+  for (const ev of ['fullscreenchange', 'webkitfullscreenchange']) document.addEventListener(ev, () => {
+    const on = !!fsElement();
+    document.body.classList.toggle('fullscreen', on);
+    fsBtn.setAttribute('aria-pressed', String(on));
+    fsBtn.textContent = on ? 'Lämna helskärm' : 'Helskärm';
+  });
+  // Tangenten F byter också, utom när man skriver i ett fält
+  window.addEventListener('keydown', (e) => {
+    if (e.key.toLowerCase() !== 'f' || e.altKey || e.ctrlKey || e.metaKey || e.repeat) return;
+    if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    toggleFullscreen();
+  });
 }
 
 let last = performance.now();
