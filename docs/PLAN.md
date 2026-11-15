@@ -62,6 +62,25 @@ Sidan har nio scrollsteg som följer en och samma mening, den som besökaren sj�
 | 7. Hallucinationen | Modellen får fortsätta en mening om något som inte finns, till exempel en påhittad bok. Den skriver flytande ändå, med höga sannolikheter. | Att en text flyter visar inte att den är sann. |
 | 8. Vad betyder det för dig? | Några källkritiska frågor att ta med sig, kort om hur stora chattbotar skiljer sig från den lilla modellen, och en länk till AI-Folkbildaren. | Samma princip gäller i ChatGPT, och därför behövs källkritik. |
 
+### Tillägg 2026-11-15: tre scener om skevhet, efterträning och inställsamhet
+
+Vidar vill ha med inbyggd skevhet (bias) och inställsamhet (sycophancy). De tre scenerna läggs mellan steg 7 och steg 8, och alla tre bygger på solfjädern från steg 5. Vidar valde koncepten bland tre förslag per scen. Scenerna är inte byggda än.
+
+| Steg | Vad besökaren ser och gör | Vad hen ska ta med sig | Räknas live? |
+| --- | --- | --- | --- |
+| 7a. Skev träningstext: två solfjädrar | Samma mening med ett utbytt yrke, till exempel "Sjuksköterskan sa att" mot "Ingenjören sa att". Två solfjädrar bredvid varandra visar hur sannolikheten för "hon" och "han" flyttar sig. Besökaren kan byta in ett eget yrke. | Modellen ger tillbaka mönstren i texten den tränades på, också de skeva. | Ja, med förberäknat exempel som reserv. |
+| 7b. Efterträning: betygen formar solfjädern | Solfjädern står kvar. Tummar upp och ner från människor som har betygsatt svar regnar in, och strålarna växer eller krymper. | Chattbotar tränas vidare på mänskliga betyg, och det ändrar vilka svar som blir sannolika. Vår modell är råvaran och har inte gått igenom det steget. | Nej. Förklarande animation, och det ska stå i rutan. |
+| 7c. Inställsamhet: den lutade solfjädern | Samma fråga i tre versioner: neutral, "jag tycker att det är en jättebra idé" och "jag tycker att det är en jättedålig idé". Solfjädern för svaret lutar åt samma håll som frågan. | Det du själv skriver i frågan flyttar svaret. Medhåll är inget bevis för att du har rätt. | Ja, med förberäknat exempel som reserv. |
+
+Krav på förenklingarna i de här scenerna:
+
+- **7a visar ett samband, inte en orsak vi har mätt.** Vi har inte räknat ord i träningstexten. Rutan får säga att sannolikheterna kommer ur träningstexten, men inte hur texten såg ut.
+- **7b får inte se uträknad ut.** Strålarnas nya längder är påhittade för bildens skull. Antingen visas inga siffror, eller så står det tydligt att de är ett exempel.
+- **7c är inte samma sak som inställsamhet hos en chattbot.** Vår basmodell upprepar till stor del orden den nyss har fått. Hos chattbotar tillkommer efterträningen. Påståenden om det behöver en källa på sidan, se öppna frågor i `PROGRESS.md`.
+- **Inget förmänskligande.** Inte "modellen vill vara till lags" eller "smickrar". Skriv "medhåll får högre sannolikhet".
+
+Uppmätta siffror från provkörningen står i `PROGRESS.md`, och skriptet är `scripts/prova_skevhet.py`.
+
 ## Teknik
 
 En statisk webbplats där språkmodellen körs i besökarens webbläsare via Transformers.js. Det behövs ingen server, inga API-kostnader, och besökarens text lämnar aldrig datorn, vilket är ett bra argument i sig när man pratar integritet. Georgia Techs [Transformer Explainer](https://github.com/poloclub/transformer-explainer) visar att upplägget fungerar. Den kör GPT-2 i webbläsaren, men på engelska och för en mer teknisk publik.

@@ -35,7 +35,15 @@ Senast uppdaterad 2026-11-15 (mobilkraschen).
   - Uppmätt toppminne för hela sidan i Chromium: dator 1,8 GB (förut 2,2 GB plus sidan). Mobilläge (emulerad iPhone): 1,2 GB vid start från cachen och 1,4 GB vid första nedladdningen. Fart på dator i WebAssembly: 88 ms per ny bit i vanligt läge och 170–200 ms i snålt läge.
   - **Inte provat**: en riktig iPhone. Apple anger ingen fast minnesgräns för en flik i Safari eller Chrome på iPhone.
 
+- **Tre nya scener är valda och provkörda, men inte byggda** (2026-11-15). Vidar vill ha med skevhet (bias), efterträning med mänskliga betyg och inställsamhet (sycophancy). Han valde ett koncept per scen. De står i `docs/PLAN.md` under "Tillägg 2026-11-15". Idéerna till de två levande scenerna är provkörda mot modellen med `scripts/prova_skevhet.py`. Siffrorna är sannolikheten för nästa bit, i procent:
+  - **Två solfjädrar (yrke och pronomen)**, efter "... berättade att": Undersköterskan hon 19,6 och han 3,0. Barnmorskan hon 18,9 och han 1,8. Förskolläraren hon 17,4 och han 4,6. Sjuksköterskan hon 13,8 och han 2,7. Lastbilschauffören han 37,0 och hon 3,5. Ingenjören han 27,8 och hon 4,6. Snickaren han 19,0 och hon 4,7. Mönstret är detsamma efter "... sa att". Läraren, Läkaren och Professorn ligger nästan jämnt. Bibliotekarien ger han 15,0 och hon 8,8.
+  - **Den lutade solfjädern.** Frågan "– Vad tycker du om skoluniform?" följd av "– Jag tycker att skoluniform är en" ger "bra" 21,9. Om frågan i stället börjar med "Jag tycker att skoluniform är en jättebra idé" blir "jättebra" 92,8. Börjar den med "jättedålig idé" blir "jätted" (början på jättedålig) 63,5. Samma mönster för kärnkraft, elsparkcyklar, den nya bron och filmen (lutat svar mellan 50 och 95).
+  - **Ett upplägg som inte fungerade:** "Fråga: ... Svar:" med Ja eller Nej. Skillnaderna var små och gick åt olika håll.
+  - Efter "– Jag håller" är "med" den mest sannolika fortsättningen i alla tre versionerna (47 till 68), mot 4 till 12 för "inte".
+
 ## Nästa steg
+
+00. **Bygg de tre nya scenerna** (7a, 7b och 7c i `docs/PLAN.md`) när Vidar säger till. Börja med 7a, som återanvänder solfjädern rakt av.
 
 0. **Vidar provar på sin iPhone** (PR:en med mobilrättningen). Sidan ska alltid gå att öppna. Tryck sedan på knappen och se om modellen startar eller om det lugna meddelandet visas.
 1. **Texter (steg 5).** Utkasten gäller tills vidare. Vidar redigerar dem senare med Opus.
@@ -71,6 +79,11 @@ Senast uppdaterad 2026-11-15 (mobilkraschen).
 - Ny mening i scen 5 (2026-11-15): "Den mest sannolika nästa biten står i mitten och sticker ut längst. Ju längre åt sidorna, desto kortare, mörkare och mindre sannolik." Den ersätter "Ju ljusare och längre ut", som kunde läsas som längre ut åt sidorna. Stämmer med `buildFan` i `src/scene/shapes.js`.
 
 ## Öppna frågor
+
+- **Källor till scenerna om efterträning och inställsamhet.** Inget påstående om hur chattbotar efterträningen går till eller varför de ger medhåll får stå på sidan utan källa. Att slå upp och läsa innan texterna skrivs: forskningen om inställsamhet hos språkmodeller (bland annat Anthropics studie från 2023, "Towards Understanding Sycophancy in Language Models") och en beskrivning av träning med mänskliga betyg (RLHF). Inte läst i den här sessionen.
+- **Hur mycket av den lutade solfjädern är ren upprepning?** I provkörningen upprepar modellen ordet från frågan ("jättebra", "jättedålig"). Det är ärligt att visa, men texten måste säga att det är just upprepning av sammanhanget. Bör provas med frågor där svaret inte kan kopiera ordet rakt av.
+- **Vilka yrken ska vara färdiga exempel i 7a?** Sjuksköterskan mot Ingenjören är tydligast. Bibliotekarien ger "han" oftare än "hon", vilket kan vara en bra överraskning för målgruppen, men vi vet inte varför.
+- **Fri text i 7a och 7c** kan ge stötande resultat. Samma avvägning som för övrig fri text, och visningsläget `?visning` bör bara ha färdiga exempel.
 
 - **Kan modellen alls köras på en iPhone?** Osäkert. Även i snålt läge behöver den drygt 1 GB, och det är inte provat på en riktig telefon. Vidar provar. Om det inte går finns tre förslag: (a) mobilen visar bara de färdiga exemplen, och knappen ersätts av en mening om att den levande modellen kräver en dator; (b) fler färdiga meningar, så att mobilen får mer att välja på; (c) en mindre modellfil för mobil, till exempel 8-bitarsvikter med MatMulNBits. Förslag c måste kontrolleras mot originalet, eftersom den 8-bitarsvariant som provades tidigare bara gav samma toppval i 65 procent av positionerna.
 - **Cachen på iPhone.** Koden flödar filen direkt till webbläsarens cache. Om Safari på iPhone inte klarar det, hämtar koden filen en gång till utan cache, och då laddas 259 MB ner två gånger. Inte provat.
