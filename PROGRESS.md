@@ -73,9 +73,11 @@ Senast uppdaterad 2026-11-16 (research med källor i `docs/KALLOR.md`, varning f
   - **Attention:** gott stöd för att forskare är oeniga (Jain och Wallace 2019, Wiegreffe och Pinter 2019, Bibal m.fl. 2022, Abnar och Zuidema 2020). Att så mycket vikt hamnar på första biten har ett namn: *attention sink* (Xiao m.fl. 2023).
   - **Scen 7, skevhet:** i svensk text nämns bibliotekarier oftare med *han* än *hon* (23 procent *hon*), fast 76 procent av bibliotekarierna är kvinnor (Hansson m.fl. 2021, SweWinogender). Det kan förklara vår modells Bibliotekarien, men träningstexten är en annan. Att mönstret kan bli starkare eller svagare i modellen är belagt för andra modeller, inte direkt för en språkmodell mot sin egen text.
 
+- **Textförslagen från researchen är införda** (2026-11-16): scen 1 (126M och 136 miljoner), scen 2 (siffror blir en bit per siffra), scen 4 (attention sink), scen 7 (bibliotekarier i svensk text), scen 8 (jämföra svar, ny mening om OpenAIs bedömare, "en instruktion som du inte ser") och scen 9 ("en del av förklaringen" och de tre formerna som studien faktiskt mätte). "En säker ton i ett osäkert svar" är borta. Rutan i scen 8 är nu så lång att den scrollar inuti. Provat i 1280 × 720 och emulerad iPhone, utan fel i konsolen.
+
 ## Nästa steg
 
-0. **Vidar tar ställning till textförslagen i `docs/KALLOR.md`**, särskilt "en säker ton" i scen 9 (saknar stöd), "sätta betyg" och "dold instruktion" i scen 8, och om Bibliotekarien ska bli ett färdigt exempel i scen 7.
+0. **Vidar läser de ändrade rutorna** i scen 1, 2, 4, 7, 8 och 9 (se ovan).
 1. **Texter (steg 5).** Utkasten gäller tills vidare. Vidar redigerar dem senare med Opus.
 2. **Vidar provar den nya resan** och säger vad som känns rätt och fel: tempo, ljus, hur länge varje scen varar.
 3. **Finputs (steg 6).** Mobilvyn är grovt gjord: listen med reglage tar stor plats. Prova också på en svag dator och med skärmläsare.
@@ -118,7 +120,7 @@ Senast uppdaterad 2026-11-16 (research med källor i `docs/KALLOR.md`, varning f
 
 ## Öppna frågor
 
-- **Källorna till scenerna om efterträning och inställsamhet är lästa** (2026-11-16, `docs/KALLOR.md`). Kvar: att ändra de formuleringar som inte stämmer med källorna.
+- **Källorna till scenerna om efterträning och inställsamhet är lästa** (2026-11-16, `docs/KALLOR.md`). Formuleringarna är ändrade efter källorna.
 - **Varför heter modellen 126M?** Gissning: namnet kommer från träningsramverkets standardstorlek, som räknar med GPT-2:s ordförråd. Varken artikeln eller modellkortet säger det. Modellkortet hos AI Sweden kräver ett godkännande, och kontot har inte det. Kan frågas direkt till AI Sweden.
 - **Räcker upprepning som bild av inställsamhet?** Provat: utan ord att upprepa blir lutningen svag i den här modellen. Scenen visar därför upprepning och säger det i rutan. Frågan är om det är tillräckligt nära det besökaren möter i en chattbot.
 - **Scenen om efterträning visar en påhittad förändring.** Det står tydligt, men det är sidans enda bild som inte är uträknad. Är det godtagbart?

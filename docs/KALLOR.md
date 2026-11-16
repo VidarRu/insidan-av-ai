@@ -1,6 +1,8 @@
 # Källor till påståendena på sidan
 
-Research 2026-11-16. Artiklarna är lästa i fulltext, inte bara sammanfattningarna. Citaten är ordagranna. Förslagen till ändrad text är inte införda på sidan.
+Research 2026-11-16. Artiklarna är lästa i fulltext, inte bara sammanfattningarna. Citaten är ordagranna.
+
+**Förslagen är införda på sidan** (2026-11-16, Vidars beslut), med två avvikelser. Scen 8 behåller ordet "betyg" som samlingsord, eftersom det används i flera scener och bilden bygger på tummar. Första raden lyder i stället "I en vanlig metod får människor jämföra svar och välja det bästa. Det blir ett slags betyg." Meningen om bibliotekarier säger "I den texten står *han* över huvud taget oftare än *hon*", eftersom källan gäller en viss textsamling och inte all svensk text.
 
 Kort sagt: tre av punkterna får gott stöd. Två formuleringar bör ändras: "en säker ton" i scen 9 och "sätta betyg" i scen 8. Frågan om varför modellen heter 126M är fortfarande öppen.
 

@@ -93,7 +93,7 @@
               <summary>Så här är det egentligen</summary>
               <div class="panel">
                 <p>Resan inåt är ett berättargrepp. Ordningen följer uträkningen: först bitarna, sedan lagren och sist sannolikheterna. Djupet i bilden är däremot påhittat. I modellen ligger ingenting inuti något annat. Allt är tal i ett och samma program.</p>
-                <p>Modellen här heter GPT-SW3 och är gjord av AI Sweden. Det här är en liten version med ungefär 136 miljoner inställbara tal, tränad på text på nordiska språk och engelska.</p>
+                <p>Modellen här heter GPT-SW3 och är gjord av AI Sweden. Det här är en liten version, som AI Sweden kallar 126M. När vi räknar de inställbara talen i modellfilen blir de ungefär 136 miljoner. Modellen är tränad på text på nordiska språk och engelska.</p>
                 <p>Den är en basmodell. Den svarar inte på frågor, den fortsätter bara texten. Chattbotar som ChatGPT är mycket större och har dessutom tränats för att föra samtal, men i grunden gör de samma sak.</p>
               </div>
             </details>
@@ -133,7 +133,7 @@
             <details class="more">
               <summary>Så här är det egentligen</summary>
               <div class="panel">
-                <p>Bitarna bestäms innan modellen tränas. Ett program räknar vilka teckenföljder som är vanligast i en stor mängd text och gör bitar av dem. Varje bit får ett nummer, och det är numren som modellen räknar med. Tecknet ␣ visar att biten börjar med ett mellanslag.</p>
+                <p>Bitarna bestäms innan modellen tränas. Ett program räknar vilka teckenföljder som är vanligast i en stor mängd text och gör bitar av dem. Varje bit får ett nummer, och det är numren som modellen räknar med. Siffror blir alltid en bit per siffra. Tecknet ␣ visar att biten börjar med ett mellanslag.</p>
                 <p>GPT-2 är en äldre engelsk modell och används här som jämförelse. Dess bitar har inga punkter i det här rummet. Den arbetar dessutom med byte, så en bokstav som ä kan klyvas mitt itu. Den halvan visas som ½.</p>
               </div>
             </details>
@@ -213,7 +213,7 @@
               <summary>Så här är det egentligen</summary>
               <div class="panel">
                 <p>De tre trådarna är uppmätta i modellen. Före första lagret är talen för <em>fil</em> identiska i de tre meningarna. Efter varje lager skiljer de sig mer. Avståndet mellan trådarna visar vinkeln mellan vektorerna. Vad skillnaden innebär går inte att läsa av i bilden.</p>
-                <p>Under ”Visa siffrorna” finns så kallade attention-vikter: hur tungt varje tidigare bit väger när talen för <em>fil</em> räknas om, i genomsnitt över modellens lager. I den här modellen hamnar det mesta av vikten på meningens första bit, så den biten är borträknad. Forskare är inte överens om hur mycket sådana vikter förklarar av det modellen räknar fram.</p>
+                <p>Under ”Visa siffrorna” finns så kallade attention-vikter: hur tungt varje tidigare bit väger när talen för <em>fil</em> räknas om, i genomsnitt över modellens lager. I den här modellen hamnar det mesta av vikten på meningens första bit, även när den biten inte är viktig för meningen. Det är vanligt i språkmodeller och kallas på engelska attention sink. Därför är den biten borträknad. Forskare är inte överens om hur mycket sådana vikter förklarar av det modellen räknar fram.</p>
                 <p>Modellen räknar bara bakåt. Ord som kommer efter <em>fil</em> kan inte påverka talen för <em>fil</em>. Därför står ordet sist i alla tre meningarna.</p>
                 <p>Lagren är inga skivor i ett rum. Ett lager är ett steg i uträkningen. Skivorna i bilden är till för att stegen ska synas.</p>
               </div>
@@ -326,6 +326,7 @@
               <summary>Så här är det egentligen</summary>
               <div class="panel">
                 <p>Sidan visar modellens sannolikheter. Vi har inte räknat orden i träningstexten, så vi kan inte visa hur skev själva texten är. Modellens tal har ställts in av träningstexten och inget annat, men mönstret kan vara både starkare och svagare i modellen än i texten.</p>
+                <p>Ett exempel: forskare vid Göteborgs universitet har räknat på svensk text från tidningar, sociala medier och forskning. Där nämns bibliotekarier oftare med <em>han</em> än med <em>hon</em>, fast tre av fyra bibliotekarier är kvinnor. I den texten står <em>han</em> över huvud taget oftare än <em>hon</em>. Modellen tränades på annan text, men mönstret liknar det.</p>
                 <p>Kön och yrke är bara ett exempel som är lätt att mäta. Samma sak gäller vilka språk, platser, grupper och åsikter det finns mycket text om, och hur det skrivs om dem.</p>
                 <p>Meningarna fortsätter oftast med något annat än <em>hon</em> eller <em>han</em>. Det är förhållandet mellan de två som skiljer.</p>
               </div>
@@ -344,7 +345,7 @@
             <h2 id="h8"><span>8</span> Efterträningen</h2>
             <p class="line">Skevheten kom ur träningstexten. Men en chattbot formas av mer än texten.</p>
             <p class="line">Modellen på den här sidan är bara tränad att fortsätta text. En chattbot har tränats vidare efter det.</p>
-            <p class="line">I en vanlig metod får människor sätta betyg på svar. Sedan ställs modellens tal om, så att svar som liknar de högt betygsatta blir mer sannolika.</p>
+            <p class="line">I en vanlig metod får människor jämföra svar och välja det bästa. Det blir ett slags betyg. Sedan ställs modellens tal om, så att svar som liknar de högt betygsatta blir mer sannolika.</p>
             <p class="line">Solfjädern formas om. Den visar inte längre bara vad som brukar stå i text, utan också vad människor har gett högt betyg.</p>
             <p class="line">De som sätter betygen, och de som skriver reglerna för betygen, påverkar alltså vilka svar du får.</p>
           </div>
@@ -356,8 +357,9 @@
               <summary>Så här är det egentligen</summary>
               <div class="panel">
                 <p>Modellen på den här sidan har inte gått igenom det här steget. Därför går förändringen inte att räkna fram här. Vilka bitar som växer och krymper i bilden har vi valt själva, för att visa principen.</p>
-                <p>Bilden förenklar. Betygen sätts på hela svar och inte på enskilda bitar. Ofta tränas först en hjälpmodell att förutsäga betygen, och den används sedan när språkmodellens tal ställs om. Metoden kallas på engelska reinforcement learning from human feedback, förkortat RLHF.</p>
-                <p>Det finns fler sätt att forma en chattbot. Den tränas på exempelsamtal som människor har skrivit, och tjänsten lägger ofta en dold instruktion före ditt samtal.</p>
+                <p>Bilden förenklar. Människorna jämför hela svar, inte enskilda bitar, och väljer det bästa med hjälp av regler som de har fått. Ofta tränas först en hjälpmodell att förutsäga vilket svar människorna väljer. Hjälpmodellen sätter sedan betyg på nya svar, och de betygen används när språkmodellens tal ställs om. Metoden kallas på engelska reinforcement learning from human feedback, förkortat RLHF.</p>
+                <p>I OpenAIs studie från 2022 var de som jämförde svaren omkring 40 personer. De var oeniga i ungefär var fjärde jämförelse. Forskarna skriver att modellen anpassades efter de personernas val och efter forskarnas egna regler.</p>
+                <p>Det finns fler sätt att forma en chattbot. Den tränas också på exempelsvar som människor har skrivit, och tjänsten lägger ofta en instruktion före ditt samtal, som du inte ser.</p>
               </div>
             </details>
           </div>
@@ -375,7 +377,7 @@
             <p class="line">Träningstexten och betygen formar modellen i förväg. En sak till flyttar sannolikheterna, och den kommer från dig: det du själv skriver.</p>
             <p class="line">Allt som står i frågan räknas med. Till vänster en fråga utan åsikt. Till höger samma fråga, men den som frågar säger först vad den själv tycker.</p>
             <p class="line">Svaret lutar åt samma håll som frågan. Byt åsikt i frågan, så byter svaret sida.</p>
-            <p class="line">Hos chattbotar kallas det inställsamhet, på engelska sycophancy. Efterträningen kan förstärka den, eftersom människor ofta ger högre betyg åt svar som håller med dem.</p>
+            <p class="line">Hos chattbotar kallas det inställsamhet, på engelska sycophancy. Efterträningen kan vara en del av förklaringen. Svar som håller med den som frågar får oftare högre betyg.</p>
             <p class="line">Medhåll från en chattbot visar alltså inte att du har rätt. Prova att ställa frågan utan att säga vad du själv tycker.</p>
           </div>
           <div class="dock">
@@ -410,7 +412,7 @@
               <summary>Så här är det egentligen</summary>
               <div class="panel">
                 <p>Modellen på den här sidan har inga betyg bakom sig. Här beror lutningen på att texten före väger tungt i uträkningen. Till stor del upprepar modellen ordet som nyss stod i frågan. När vi provade frågor där svaret inte kunde upprepa ett ord blev lutningen svag.</p>
-                <p>Inställsamhet hos en chattbot är mer än upprepning. Den kan visa sig som beröm, som att svaret ändras när du säger emot, eller som en säker ton i ett osäkert svar. Forskare har mätt sådant hos flera stora chattbotar.</p>
+                <p>Inställsamhet hos en chattbot är mer än upprepning. Den kan visa sig som mer beröm av en text när du säger att du har skrivit den, som att ett rätt svar ändras när du säger emot, eller som att ditt eget misstag upprepas. Forskare på Anthropic mätte det 2023 hos fem stora chattbotar från tre företag.</p>
                 <p>Den lilla modellen ger inget svar i egentlig mening. Den fortsätter en text som ser ut som ett samtal.</p>
               </div>
             </details>
