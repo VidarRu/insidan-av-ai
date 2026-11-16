@@ -1,6 +1,6 @@
 # Status
 
-Senast uppdaterad 2026-11-16 (länken till AI-Folkbildaren i slutscenen är nedtonad).
+Senast uppdaterad 2026-11-16 (research med källor i `docs/KALLOR.md`, varning för mobil, nedtonad länk till AI-Folkbildaren).
 
 ## Klart
 
@@ -61,13 +61,21 @@ Senast uppdaterad 2026-11-16 (länken till AI-Folkbildaren i slutscenen är nedt
 
 - **Länken till AI-Folkbildaren är nedtonad** (2026-11-16, Vidars önskemål). Den stora knappen "Till AI-Folkbildaren" är borta. I stället står en liten rad längst ner till höger i slutrutan: "Gillar du det här bygget? Besök gärna AI-Folkbildaren och titta på mer." "Börja om med en ny mening" står kvar som länk. Provat i 1280 × 720 och i mobilbredd.
 
+- **Vidar har provat** (2026-11-16): inledningsraderna är bra, vridningen fungerar fint, sidan fungerar på hans iPhone, och han gillar de tre nya scenerna. Texterna behöver inte redigeras just nu.
+
+- **Varning för mobil** (2026-11-16). På mobil och surfplatta visar första trycket på "Starta modellen" en ruta: "Den levande modellen fungerar bäst på en dator. På mobil och surfplatta behöver den mycket minne, räknar långsamt och startar ibland inte alls. Hela sidan fungerar ändå med färdiga exempel." Knappen byter till "Starta ändå", och andra trycket startar. Rutan läses upp av skärmläsare (`role="status"`). Provat i en emulerad iPhone 13. På dator ändras ingenting.
+
+- **Research med källor** (2026-11-16), se `docs/KALLOR.md`. Artiklarna är lästa i fulltext. Resultat:
+  - **Scen 8, efterträning:** gott stöd (Ouyang m.fl. 2022, InstructGPT), också för att de som skriver reglerna påverkar svaren. Men bedömarna *jämför* svar i stället för att sätta betyg, och ordet "dold" om instruktionen före samtalet är för starkt.
+  - **Scen 9, inställsamhet:** gott stöd (Sharma m.fl. 2023, ICLR 2024; fem chattbotar från Anthropic, OpenAI och Meta). Men **"en säker ton i ett osäkert svar" har inget stöd** i studien och bör bytas, till exempel mot "ditt eget misstag upprepas".
+  - **126M eller 136 miljoner:** "ungefär 136 miljoner" stämmer. Namnet följer troligen ramverkets standardstorlek med GPT-2:s ordförråd (126,0 miljoner med 51 200 bitar). Det är en gissning, se öppna frågor.
+  - **Bitarna:** GPT-SW3 använder BPE via SentencePiece, tränad på 1 procent av träningstexten. Förenklingen på sidan stämmer.
+  - **Attention:** gott stöd för att forskare är oeniga (Jain och Wallace 2019, Wiegreffe och Pinter 2019, Bibal m.fl. 2022, Abnar och Zuidema 2020). Att så mycket vikt hamnar på första biten har ett namn: *attention sink* (Xiao m.fl. 2023).
+  - **Scen 7, skevhet:** i svensk text nämns bibliotekarier oftare med *han* än *hon* (23 procent *hon*), fast 76 procent av bibliotekarierna är kvinnor (Hansson m.fl. 2021, SweWinogender). Det kan förklara vår modells Bibliotekarien, men träningstexten är en annan. Att mönstret kan bli starkare eller svagare i modellen är belagt för andra modeller, inte direkt för en språkmodell mot sin egen text.
+
 ## Nästa steg
 
-000. **Vidar läser de nya inledningsraderna** (första raden i scen 2 till 10 och sista raden i scen 1) och provar att vrida bilden, särskilt lagren från sidan.
-
-00. **Vidar tittar på de tre nya scenerna** och säger vad som känns rätt och fel. Därefter research och källor till påståendena i scen 8 och 9 (se "Att kontrollera").
-
-0. **Vidar provar på sin iPhone** (PR:en med mobilrättningen). Sidan ska alltid gå att öppna. Tryck sedan på knappen och se om modellen startar eller om det lugna meddelandet visas.
+0. **Vidar tar ställning till textförslagen i `docs/KALLOR.md`**, särskilt "en säker ton" i scen 9 (saknar stöd), "sätta betyg" och "dold instruktion" i scen 8, och om Bibliotekarien ska bli ett färdigt exempel i scen 7.
 1. **Texter (steg 5).** Utkasten gäller tills vidare. Vidar redigerar dem senare med Opus.
 2. **Vidar provar den nya resan** och säger vad som känns rätt och fel: tempo, ljus, hur länge varje scen varar.
 3. **Finputs (steg 6).** Mobilvyn är grovt gjord: listen med reglage tar stor plats. Prova också på en svag dator och med skärmläsare.
@@ -110,13 +118,14 @@ Senast uppdaterad 2026-11-16 (länken till AI-Folkbildaren i slutscenen är nedt
 
 ## Öppna frågor
 
-- **Källor till scenerna om efterträning och inställsamhet.** Inget påstående om hur chattbotar efterträningen går till eller varför de ger medhåll får stå på sidan utan källa. Att slå upp och läsa innan texterna skrivs: forskningen om inställsamhet hos språkmodeller (bland annat Anthropics studie från 2023, "Towards Understanding Sycophancy in Language Models") och en beskrivning av träning med mänskliga betyg (RLHF). Inte läst i den här sessionen.
+- **Källorna till scenerna om efterträning och inställsamhet är lästa** (2026-11-16, `docs/KALLOR.md`). Kvar: att ändra de formuleringar som inte stämmer med källorna.
+- **Varför heter modellen 126M?** Gissning: namnet kommer från träningsramverkets standardstorlek, som räknar med GPT-2:s ordförråd. Varken artikeln eller modellkortet säger det. Modellkortet hos AI Sweden kräver ett godkännande, och kontot har inte det. Kan frågas direkt till AI Sweden.
 - **Räcker upprepning som bild av inställsamhet?** Provat: utan ord att upprepa blir lutningen svag i den här modellen. Scenen visar därför upprepning och säger det i rutan. Frågan är om det är tillräckligt nära det besökaren möter i en chattbot.
 - **Scenen om efterträning visar en påhittad förändring.** Det står tydligt, men det är sidans enda bild som inte är uträknad. Är det godtagbart?
-- **Vilka yrken ska vara färdiga exempel i 7a?** Sjuksköterskan mot Ingenjören är tydligast. Bibliotekarien ger "han" oftare än "hon", vilket kan vara en bra överraskning för målgruppen, men vi vet inte varför.
+- **Vilka yrken ska vara färdiga exempel i 7a?** Sjuksköterskan mot Ingenjören är tydligast. Bibliotekarien ger "han" oftare än "hon", och nu finns en möjlig förklaring med källa: i svensk text nämns bibliotekarier oftare med *han* (se `docs/KALLOR.md`, punkt 6).
 - **Fri text i 7a och 7c** kan ge stötande resultat. Samma avvägning som för övrig fri text, och visningsläget `?visning` bör bara ha färdiga exempel.
 
-- **Kan modellen alls köras på en iPhone?** Osäkert. Även i snålt läge behöver den drygt 1 GB, och det är inte provat på en riktig telefon. Vidar provar. Om det inte går finns tre förslag: (a) mobilen visar bara de färdiga exemplen, och knappen ersätts av en mening om att den levande modellen kräver en dator; (b) fler färdiga meningar, så att mobilen får mer att välja på; (c) en mindre modellfil för mobil, till exempel 8-bitarsvikter med MatMulNBits. Förslag c måste kontrolleras mot originalet, eftersom den 8-bitarsvariant som provades tidigare bara gav samma toppval i 65 procent av positionerna.
+- **Kan modellen alls köras på en iPhone?** Den fungerar på Vidars iPhone (2026-11-16). Andra telefoner med mindre minne är inte provade, därför varningen vid första trycket. Tidigare anteckning: Även i snålt läge behöver den drygt 1 GB, och det är inte provat på en riktig telefon. Vidar provar. Om det inte går finns tre förslag: (a) mobilen visar bara de färdiga exemplen, och knappen ersätts av en mening om att den levande modellen kräver en dator; (b) fler färdiga meningar, så att mobilen får mer att välja på; (c) en mindre modellfil för mobil, till exempel 8-bitarsvikter med MatMulNBits. Förslag c måste kontrolleras mot originalet, eftersom den 8-bitarsvariant som provades tidigare bara gav samma toppval i 65 procent av positionerna.
 - **Cachen på iPhone.** Koden flödar filen direkt till webbläsarens cache. Om Safari på iPhone inte klarar det, hämtar koden filen en gång till utan cache, och då laddas 259 MB ner två gånger. Inte provat.
 
 - **Vridning på mobil.** Att dra i sidled med fingret är byggt men inte provat på en riktig telefon. Upp och ner går inte att luta där, eftersom den rörelsen scrollar.
@@ -132,7 +141,8 @@ Senast uppdaterad 2026-11-16 (länken till AI-Folkbildaren i slutscenen är nedt
 
 ## Bra att veta för nästa session
 
-- Molnmiljön heter `insidan-av-ai` och har åtkomst till Hugging Face. Hämta med `HF_HUB_DISABLE_XET=1`.
+- Molnmiljön heter `insidan-av-ai` och har åtkomst till Hugging Face, arxiv.org och aclanthology.org (de två senare tillagda 2026-11-16 för att läsa artiklar). Hämta med `HF_HUB_DISABLE_XET=1`. En session kan starta i miljön Default, som inte når dem; byt då till `insidan-av-ai`.
+- AI Swedens originalmodell (`AI-Sweden-Models/gpt-sw3-126m`) kräver ett godkännande som kontot inte har. Inställningarna finns i vår egen kopia, `HuggingVidar/gpt-sw3-126m-onnx`.
 - Modellfilerna finns inte i Git. Sidan hämtar dem från Hugging Face. Miljön har en sparad skrivnyckel för `huggingface.co`, som proxyn sätter in automatiskt.
 - Starta med `npm install` och `npm run dev`. `?ingenmodell` stänger av modellen, `?backend=wasm` tvingar WebAssembly och `?snal` ger mobilens snåla läge på dator.
 - Sidan hämtar `onnx/model_split.onnx` och `onnx/model_split.onnx_data` (se `src/model/config.js`). Lokalt: lägg dem i `public/models/gpt-sw3-126m/onnx/` tillsammans med `tokenizer.json` och `tokenizer_config.json`, och starta med `VITE_MODEL_BASE=/models/gpt-sw3-126m/ npm run dev`.

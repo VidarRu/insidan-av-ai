@@ -226,6 +226,7 @@ const guard = {
 };
 
 const CALM = 'Sidan visar i stället färdiga exempel, uträknade i förväg med samma modell. Bara egna meningar kräver modellen.';
+const MOBILE = 'Den levande modellen fungerar bäst på en dator. På mobil och surfplatta behöver den mycket minne, räknar långsamt och startar ibland inte alls. Hela sidan fungerar ändå med färdiga exempel.';
 
 async function startModel() {
   loadBtn.hidden = true;
@@ -253,7 +254,12 @@ async function startModel() {
     loadBtn.hidden = false; loadBtn.textContent = 'Försök igen';
   }
 }
-loadBtn.addEventListener('click', startModel);
+// På mobil och surfplatta varnar första trycket för minnet. Andra trycket startar.
+let warned = !small;
+loadBtn.addEventListener('click', () => {
+  if (!warned) { warned = true; setNote(MOBILE); loadBtn.textContent = 'Starta ändå'; return; }
+  startModel();
+});
 
 async function modelIsCached() {
   try {
@@ -802,8 +808,9 @@ async function init() {
     setNote('Förra försöket att starta modellen blev inte klart, troligen för att minnet tog slut. ' + CALM);
     loadBtn.textContent = 'Försök igen';
     loadBtn.hidden = false;
-  } else if (params.has('ingenmodell') || small || (saveData && !cached)) loadBtn.hidden = false;
-  else startModel();
+  } else if (params.has('ingenmodell') || small || (saveData && !cached)) {
+    loadBtn.hidden = false;
+  } else startModel();
 }
 
 init().catch((e) => { console.error(e); setStatus('error', 'Något gick fel när sidan laddades.'); });
