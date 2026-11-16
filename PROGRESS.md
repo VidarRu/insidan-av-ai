@@ -1,6 +1,6 @@
 # Status
 
-Senast uppdaterad 2026-11-15 (helskärm, vridbar bild och en inledande rad per scen).
+Senast uppdaterad 2026-11-16 (länken till AI-Folkbildaren i slutscenen är nedtonad).
 
 ## Klart
 
@@ -58,6 +58,8 @@ Senast uppdaterad 2026-11-15 (helskärm, vridbar bild och en inledande rad per s
   - **Röd tråd:** varje scen 2 till 10 börjar med en ny rad som knyter an till scenen före och säger vilken fråga scenen svarar på. Scen 1 slutar med en rad som beskriver hela vägen: bitar, tolv lager, sannolikhet för nästa bit. Scenerna är 0,6 till 1 skärmhöjd längre, så att varje rad får lika lång tid som förut (sidan är nu ungefär 49 skärmhöjder).
   - Rättat på köpet: vid minskad rörelse hoppades en rad över i scener med fem rader.
   - **Provat** i en webbläsare utan grafikkort, 1280 × 720, utan fel i konsolen: alla inledningsrader, vridning med tangent och mus, återställning, helskärm av och på, byte av fönsterhöjd. **Inte provat:** att dra med fingret på en riktig telefon, skärmläsare, riktig dator med grafikkort.
+
+- **Länken till AI-Folkbildaren är nedtonad** (2026-11-16, Vidars önskemål). Den stora knappen "Till AI-Folkbildaren" är borta. I stället står en liten rad längst ner till höger i slutrutan: "Gillar du det här bygget? Besök gärna AI-Folkbildaren och titta på mer." "Börja om med en ny mening" står kvar som länk. Provat i 1280 × 720 och i mobilbredd.
 
 ## Nästa steg
 

@@ -198,6 +198,9 @@ body.travel .scene.on .hud > * > * { pointer-events: none; }
 .outro h2 { margin-bottom: 0.4em; }
 .outro .more { display: inline-block; }
 .outro .panel { right: auto; left: 0; }
+.outrofoot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 0.8rem 1.5rem; margin-top: 0.4rem; }
+.plug { margin: 0 0 0 auto; max-width: 22rem; text-align: right; font-size: 0.85rem; color: var(--ink-dim); }
+.plug a { white-space: nowrap; }
 .outrolinks { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin: 1.1rem 0 0.9rem; }
 
 h1, h2 { font-family: var(--serif); font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; margin: 0 0 0.6em; }
